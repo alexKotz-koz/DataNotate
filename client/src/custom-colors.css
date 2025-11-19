@@ -1,0 +1,317 @@
+/* Define custom color variables */
+:root {
+  --blue: #0d6efd;
+  --indigo: #6610f2;
+  --purple: #6f42c1;
+  --pink: #d63384;
+  --red: #dc3545;
+  --orange: #fd7e14;
+  --yellow: #ffc107;
+  --green: #198754;
+  --teal: #20c997;
+  --cyan: #0dcaf0;
+  --gray0: #e3e3e3;
+  --gray1: #adb5bd;
+  --gray2: #989ea5;
+  --gray3: #82868b;
+  --gray4: #66696c; 
+  --black: #000;
+  --white: #fff;
+}
+
+/* Background color utilities using your custom colors */
+.bg-blue { background-color: var(--blue) !important; }
+.bg-indigo { background-color: var(--indigo) !important; }
+.bg-purple { background-color: var(--purple) !important; }
+.bg-pink { background-color: var(--pink) !important; }
+.bg-red { background-color: var(--red) !important; }
+.bg-orange { background-color: var(--orange) !important; }
+.bg-yellow { background-color: var(--yellow) !important; }
+.bg-green { background-color: var(--green) !important; }
+.bg-teal { background-color: var(--teal) !important; }
+.bg-cyan { background-color: var(--cyan) !important; }
+.bg-gray0 { background-color: var(--gray0) !important; }
+.bg-gray1 { background-color: var(--gray1) !important; }
+.bg-gray2 { background-color: var(--gray2) !important; }
+.bg-gray3 { background-color: var(--gray3) !important; }
+.bg-gray4 { background-color: var(--gray4) !important; }
+.bg-black { background-color: var(--black) !important; }
+.bg-white { background-color: var(--white) !important; }
+
+/* Text color utilities using your custom colors */
+.text-blue { color: var(--blue) !important; }
+.text-indigo { color: var(--indigo) !important; }
+.text-purple { color: var(--purple) !important; }
+.text-pink { color: var(--pink) !important; }
+.text-red { color: var(--red) !important; }
+.text-orange { color: var(--orange) !important; }
+.text-yellow { color: var(--yellow) !important; }
+.text-green { color: var(--green) !important; }
+.text-teal { color: var(--teal) !important; }
+.text-cyan { color: var(--cyan) !important; }
+.text-gray1 { color: var(--gray1) !important; }
+.text-gray2 { color: var(--gray2) !important; }
+.text-gray3 { color: var(--gray3) !important; }
+.text-gray4 { color: var(--gray4) !important; }
+.text-black { color: var(--black) !important; }
+.text-white { color: var(--white) !important; }
+
+/* Border color utilities using your custom colors */
+.border-blue { border-color: var(--blue) !important; }
+.border-indigo { border-color: var(--indigo) !important; }
+.border-purple { border-color: var(--purple) !important; }
+.border-pink { border-color: var(--pink) !important; }
+.border-red { border-color: var(--red) !important; }
+.border-orange { border-color: var(--orange) !important; }
+.border-yellow { border-color: var(--yellow) !important; }
+.border-green { border-color: var(--green) !important; }
+.border-teal { border-color: var(--teal) !important; }
+.border-cyan { border-color: var(--cyan) !important; }
+.border-gray1 { border-color: var(--gray1) !important; }
+.border-gray2 { border-color: var(--gray2) !important; }
+.border-gray3 { border-color: var(--gray3) !important; }
+.border-gray4 { border-color: var(--gray4) !important; }
+
+/* Custom button styles using your colors */
+.btn-blue {
+  background-color: var(--blue);
+  border-color: var(--blue);
+  color: var(--white);
+}
+.btn-blue:hover {
+  background-color: #0b5ed7;
+  border-color: #0a58ca;
+  color: var(--white);
+}
+
+.btn-indigo {
+  background-color: var(--indigo);
+  border-color: var(--indigo);
+  color: var(--white);
+}
+.btn-indigo:hover {
+  background-color: #520dc2;
+  border-color: #4d0a9a;
+  color: var(--white);
+}
+
+.btn-purple {
+  background-color: var(--purple);
+  border-color: var(--purple);
+  color: var(--white);
+}
+.btn-purple:hover {
+  background-color: #5a359a;
+  border-color: #4e2a84;
+  color: var(--white);
+}
+
+.btn-teal {
+  background-color: var(--teal);
+  border-color: var(--teal);
+  color: var(--white);
+}
+.btn-teal:hover {
+  background-color: #1ba085;
+  border-color: #178a73;
+  color: var(--white);
+}
+
+.btn-orange {
+  background-color: var(--orange);
+  border-color: var(--orange);
+  color: var(--white);
+}
+.btn-orange:hover {
+  background-color: #dc6502;
+  border-color: #c85d02;
+  color: var(--white);
+}
+
+/* Outline button styles using your colors */
+.btn-outline-blue {
+  background-color: transparent;
+  border-color: var(--blue);
+  color: var(--blue);
+}
+.btn-outline-blue:hover {
+  background-color: var(--blue);
+  border-color: var(--blue);
+  color: var(--white);
+}
+
+.btn-outline-indigo {
+  background-color: transparent;
+  border-color: var(--indigo);
+  color: var(--indigo);
+}
+.btn-outline-indigo:hover {
+  background-color: var(--indigo);
+  border-color: var(--indigo);
+  color: var(--white);
+}
+
+.btn-outline-purple {
+  background-color: transparent;
+  border-color: var(--purple);
+  color: var(--purple);
+}
+.btn-outline-purple:hover {
+  background-color: var(--purple);
+  border-color: var(--purple);
+  color: var(--white);
+}
+
+.btn-outline-pink {
+  background-color: transparent;
+  border-color: var(--pink);
+  color: var(--pink);
+}
+.btn-outline-pink:hover {
+  background-color: var(--pink);
+  border-color: var(--pink);
+  color: var(--white);
+}
+
+.btn-outline-red {
+  background-color: transparent;
+  border-color: var(--red);
+  color: var(--red);
+}
+.btn-outline-red:hover {
+  background-color: var(--red);
+  border-color: var(--red);
+  color: var(--white);
+}
+
+.btn-outline-orange {
+  background-color: transparent;
+  border-color: var(--orange);
+  color: var(--orange);
+}
+.btn-outline-orange:hover {
+  background-color: var(--orange);
+  border-color: var(--orange);
+  color: var(--white);
+}
+
+.btn-outline-yellow {
+  background-color: transparent;
+  border-color: var(--yellow);
+  color: var(--yellow);
+}
+.btn-outline-yellow:hover {
+  background-color: var(--yellow);
+  border-color: var(--yellow);
+  color: var(--black);
+}
+
+.btn-outline-green {
+  background-color: transparent;
+  border-color: var(--green);
+  color: var(--green);
+}
+.btn-outline-green:hover {
+  background-color: var(--green);
+  border-color: var(--green);
+  color: var(--white);
+}
+
+.btn-outline-teal {
+  background-color: transparent;
+  border-color: var(--teal);
+  color: var(--teal);
+}
+.btn-outline-teal:hover {
+  background-color: var(--teal);
+  border-color: var(--teal);
+  color: var(--white);
+}
+
+.btn-outline-cyan {
+  background-color: transparent;
+  border-color: var(--cyan);
+  color: var(--cyan);
+}
+.btn-outline-cyan:hover {
+  background-color: var(--cyan);
+  border-color: var(--cyan);
+  color: var(--black);
+}
+
+.btn-outline-gray1 {
+  background-color: transparent;
+  border-color: var(--gray1);
+  color: var(--gray1);
+}
+.btn-outline-gray1:hover {
+  background-color: var(--gray1);
+  border-color: var(--gray1);
+  color: var(--black);
+}
+
+.btn-outline-gray2 {
+  background-color: transparent;
+  border-color: var(--gray2);
+  color: var(--gray2);
+}
+.btn-outline-gray2:hover {
+  background-color: var(--gray2);
+  border-color: var(--gray2);
+  color: var(--white);
+}
+
+.btn-outline-gray3 {
+  background-color: transparent;
+  border-color: var(--gray3);
+  color: var(--gray3);
+}
+.btn-outline-gray3:hover {
+  background-color: var(--gray3);
+  border-color: var(--gray3);
+  color: var(--white);
+}
+
+.btn-outline-gray4 {
+  background-color: transparent;
+  border-color: var(--gray4);
+  color: var(--gray4);
+}
+.btn-outline-gray4:hover {
+  background-color: var(--gray4);
+  border-color: var(--gray4);
+  color: var(--white);
+}
+
+/* Status badges using your colors */
+.badge-green { 
+  background-color: var(--green) !important; 
+  color: var(--white);
+}
+.badge-yellow { 
+  background-color: var(--yellow) !important; 
+  color: var(--black);
+}
+.badge-red { 
+  background-color: var(--red) !important; 
+  color: var(--white);
+}
+.badge-blue { 
+  background-color: var(--blue) !important; 
+  color: var(--white);
+}
+.badge-gray1 { 
+  background-color: var(--gray1) !important; 
+  color: var(--black);
+}
+
+
+/* Nav link hover styles */
+.nav-link-hover {
+    transition: all .65s ease;
+}
+
+.nav-link-hover:hover:not(.bg-primary) {
+    background-color: var(--gray2) !important;
+    color: var(--white) !important;
+}

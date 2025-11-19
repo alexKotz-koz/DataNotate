@@ -19,7 +19,7 @@ const keys = require('../config/keys');
 require('./models/User');
 require('./models/Dataset');
 require('./models/DatasetRow');
-
+require('./models/Rubric');
 require('./services/passport');
 
 mongoose.Promise = global.Promise;
@@ -41,6 +41,7 @@ app.use(
 
 /* API Routes */
 app.use('/api/dataset', require('./routes/datasetRoutes'));
+app.use('/api/rubric', require('./routes/rubricRoutes')); // add
 
 /* Generic error handling middleware */
 app.use((err, req, res, next) => {
