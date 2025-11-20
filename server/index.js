@@ -20,6 +20,7 @@ require('./models/User');
 require('./models/Dataset');
 require('./models/DatasetRow');
 require('./models/Rubric');
+require('./models/Annotation');
 require('./services/passport');
 
 mongoose.Promise = global.Promise;
@@ -41,7 +42,8 @@ app.use(
 
 /* API Routes */
 app.use('/api/dataset', require('./routes/datasetRoutes'));
-app.use('/api/rubric', require('./routes/rubricRoutes')); // add
+app.use('/api/rubric', require('./routes/rubricRoutes'));
+app.use('/api/annotation', require('./routes/annotationRoutes'));
 
 /* Generic error handling middleware */
 app.use((err, req, res, next) => {

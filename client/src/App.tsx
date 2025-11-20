@@ -2,10 +2,9 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Root from './components/pages/Root';
 import Gallery from './components/pages/Gallery';
 import DatasetDashboard from './components/pages/DatasetDashboard';
-// import Dashboard from './pages/Dashboard';
-// import UploadPage from './pages/UploadPage';
-// import ConfigurePage from './pages/ConfigurePage';
-// import AnnotatePage from './pages/AnnotatePage';
+import NewDataset from './components/pages/NewDataset';
+import Annotate from './components/pages/Annotate';
+import RubricManagement from './components/pages/RubricManagement';
 
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './custom-colors.css';
@@ -17,10 +16,10 @@ function App() {
             <Routes>
                 <Route path="/" element={<Root />}>
                     <Route index element={<Gallery />} />
-                    <Route path="/dataset/:datasetId" element={<DatasetDashboard />} />
-                    {/* <Route path="upload" element={<UploadPage />} />
-                    <Route path="configure" element={<ConfigurePage />} />
-                    <Route path="annotate" element={<AnnotatePage />} /> */}
+                    <Route path="dataset/:datasetId" element={<DatasetDashboard />} />
+                    <Route path="upload_dataset" element={<NewDataset />} />
+                    <Route path="rubrics/:datasetId" element={<RubricManagement />} />
+                    <Route path="annotate/:datasetId/:rubricId" element={<Annotate />} />
                 </Route>
             </Routes>
         </BrowserRouter>

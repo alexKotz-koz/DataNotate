@@ -105,4 +105,40 @@ router.post('/upload', upload.single('file'), async (req, res) => {
     }
 });
 
+/**
+ * DELETE /api/dataset/:id
+ * Delete a dataset and all associated data (rows, rubric, annotations)
+ */
+router.delete('/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Check if dataset exists
+        const dataset = await Dataset.findById(id);
+        if (!dataset) {
+            return res.status(404).json({ error: 'Dataset not found' });
+        }
+
+        // Delete all associated DatasetRows
+        await DatasetRow.deleteMany({ dataset: id });
+
+        // Delete associated Rubric if exists
+        const Rubric = mongoose.model('Rubric');
+        await Rubric.deleteOne({ dataset: id });
+
+        // Mark associated Annotations as orphaned (set dataset to null)
+        // TODO: Add UI to display/manage orphaned annotations
+        const Annotation = mongoose.model('Annotation');
+        await Annotation.updateMany({ dataset: id }, { $set: { dataset: null } });
+
+        // Finally, delete the dataset itself
+        await Dataset.findByIdAndDelete(id);
+
+        res.json({ success: true, message: 'Dataset and associated data deleted' });
+    } catch (e) {
+        console.error('Error deleting dataset:', e);
+        res.status(500).json({ error: 'Failed to delete dataset' });
+    }
+});
+
 module.exports = router;

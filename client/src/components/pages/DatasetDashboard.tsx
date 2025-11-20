@@ -1,5 +1,56 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useFetchDatasetsQuery, useFetchDatasetRowsQuery, useGetRubricByDatasetQuery } from '../../store';
+import { useFetchDatasetsQuery, useFetchDatasetRowsQuery, useGetRubricsByDatasetQuery, useFetchAnnotationStatsQuery, type Rubric } from '../../store';
+
+function RubricItem({ rubric, datasetId }: { rubric: Rubric; datasetId: string }) {
+  const { data: stats } = useFetchAnnotationStatsQuery({ datasetId, rubricId: rubric._id });
+  
+  const handleDownload = async () => {
+    try {
+      const response = await fetch(`/api/annotation/download-bulk/${datasetId}?rubricId=${rubric._id}`);
+      const data = await response.json();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${rubric.title.replace(/\s+/g, '_')}_annotations.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Failed to download annotations:', error);
+      alert('Failed to download annotations');
+    }
+  };
+
+  return (
+    <div className="list-group-item">
+      <div className="d-flex justify-content-between align-items-start mb-2">
+        <div>
+          <h6 className="mb-1">{rubric.title}</h6>
+          <small className="text-muted">
+            {stats?.annotatedRows || 0} of {stats?.totalRows || 0} rows annotated
+          </small>
+        </div>
+      </div>
+      <div className="d-flex gap-2 mt-2">
+        <Link 
+          to={`/annotate/${datasetId}/${rubric._id}`}
+          className="btn btn-sm btn-primary"
+        >
+          <i className="bi bi-pencil-square me-1"></i>Annotate
+        </Link>
+        {(stats?.annotatedRows || 0) > 0 && (
+          <button 
+            onClick={handleDownload}
+            className="btn btn-sm btn-outline-success"
+          >
+            <i className="bi bi-download me-1"></i>
+            Download ({stats?.annotatedRows})
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function DatasetDashboard() {
   const { datasetId } = useParams<{ datasetId: string }>();
@@ -7,8 +58,9 @@ export default function DatasetDashboard() {
   
   const { data: datasets } = useFetchDatasetsQuery(undefined);
   const { data: rows, isLoading: rowsLoading } = useFetchDatasetRowsQuery(datasetId || '', { skip: !datasetId });
-  const { data: rubric } = useGetRubricByDatasetQuery(datasetId || '', { skip: !datasetId });
-  console.log(datasets)
+  const { data: rubrics, isLoading: rubricsLoading } = useGetRubricsByDatasetQuery(datasetId || '', { skip: !datasetId });
+  const { data: aggregateStats } = useFetchAnnotationStatsQuery({ datasetId: datasetId || '' }, { skip: !datasetId });
+  
   const dataset = datasets?.find(d => d._id === datasetId);
 
   if (!dataset) {
@@ -20,9 +72,11 @@ export default function DatasetDashboard() {
     );
   }
 
-  const hasRubric = !!rubric;
+  const hasRubrics = rubrics && rubrics.length > 0;
   const rowCount = rows?.length || 0;
   const columnCount = dataset.columns?.length || 0;
+  const totalAnnotations = aggregateStats?.totalAnnotations || 0;
+  const rubricCount = rubrics?.length || 0;
 
   return (
     <div>
@@ -36,14 +90,10 @@ export default function DatasetDashboard() {
           <p className="text-muted mb-0">{dataset.description || 'No description'}</p>
         </div>
         <div className="d-flex gap-2">
-          <Link to={`/configure`} className="btn btn-outline-primary">
-            {hasRubric ? 'Edit Rubric' : 'Configure Rubric'}
+          <Link to={`/rubrics/${datasetId}`} className="btn btn-primary">
+            <i className="bi bi-list-check me-2"></i>
+            Manage Rubrics
           </Link>
-          {hasRubric && (
-            <Link to={`/annotate/${datasetId}`} className="btn btn-primary">
-              Start Annotating
-            </Link>
-          )}
         </div>
       </div>
 
@@ -89,8 +139,8 @@ export default function DatasetDashboard() {
                   <i className="bi bi-clipboard-check text-warning fs-4"></i>
                 </div>
                 <div className="ms-3">
-                  <h3 className="mb-0">0</h3>
-                  <small className="text-muted">Annotated</small>
+                  <h3 className="mb-0">{totalAnnotations}</h3>
+                  <small className="text-muted">Total Annotations</small>
                 </div>
               </div>
             </div>
@@ -101,12 +151,12 @@ export default function DatasetDashboard() {
           <div className="card border-0 shadow-sm">
             <div className="card-body">
               <div className="d-flex align-items-center">
-                <div className={`${hasRubric ? 'bg-info' : 'bg-danger'} bg-opacity-10 rounded p-3`}>
-                  <i className={`bi bi-${hasRubric ? 'check-circle' : 'x-circle'} ${hasRubric ? 'text-info' : 'text-danger'} fs-4`}></i>
+                <div className={`${hasRubrics ? 'bg-info' : 'bg-secondary'} bg-opacity-10 rounded p-3`}>
+                  <i className={`bi bi-list-check ${hasRubrics ? 'text-info' : 'text-secondary'} fs-4`}></i>
                 </div>
                 <div className="ms-3">
-                  <h3 className="mb-0">{hasRubric ? 'Yes' : 'No'}</h3>
-                  <small className="text-muted">Has Rubric</small>
+                  <h3 className="mb-0">{rubricCount}</h3>
+                  <small className="text-muted">Rubrics</small>
                 </div>
               </div>
             </div>
@@ -140,7 +190,7 @@ export default function DatasetDashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      {rows.slice(0, 5).map((row, idx) => (
+                      {rows.slice(0, 5).map((row) => (
                         <tr key={row._id}>
                           {dataset.columns?.slice(0, 5).map(col => (
                             <td key={col} className="text-truncate" style={{ maxWidth: 200 }}>
@@ -191,27 +241,28 @@ export default function DatasetDashboard() {
             </div>
           </div>
 
-          {hasRubric && (
+          {hasRubrics && (
             <div className="card shadow-sm">
-              <div className="card-header bg-white">
-                <h5 className="mb-0">Rubric Info</h5>
+              <div className="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 className="mb-0">Rubrics & Annotations</h5>
+                <Link to={`/rubrics/${datasetId}`} className="btn btn-sm btn-outline-primary">
+                  Manage
+                </Link>
               </div>
               <div className="card-body">
-                <dl className="row mb-0">
-                  <dt className="col-sm-6 text-muted small">Display Cols</dt>
-                  <dd className="col-sm-6">{rubric.displayColumns?.length || 0}</dd>
-
-                  <dt className="col-sm-6 text-muted small">Rubric Fields</dt>
-                  <dd className="col-sm-6">{rubric.fields?.length || 0}</dd>
-                </dl>
-                <div className="mt-3">
-                  <small className="text-muted d-block mb-1">Fields:</small>
-                  <div className="d-flex flex-wrap gap-1">
-                    {rubric.fields?.map(f => (
-                      <span key={f.name} className="badge bg-info">{f.name}</span>
+                {rubricsLoading ? (
+                  <div className="text-center py-3">
+                    <div className="spinner-border spinner-border-sm" role="status">
+                      <span className="visually-hidden">Loading...</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="list-group list-group-flush">
+                    {rubrics?.map(rubric => (
+                      <RubricItem key={rubric._id} rubric={rubric} datasetId={datasetId || ''} />
                     ))}
                   </div>
-                </div>
+                )}
               </div>
             </div>
           )}

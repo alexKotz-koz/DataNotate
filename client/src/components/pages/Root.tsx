@@ -5,26 +5,21 @@ export default function Root() {
         <div className="d-flex min-vh-100">
             {/* Left Sidebar */}
             <nav className="bg-light border-end p-3" style={{ width: 240 }}>
-                <h5 className="mb-4">DataNotate</h5>
+                <h5 className="mb-4">
+                    <NavLink
+                        to="/"
+                        className='text-decoration-none text-dark'
+                    >
+                        DataNotate
+                    </NavLink>
+                </h5>
                 <ul className="list-unstyled d-grid gap-2">
+
                     <li>
                         <NavLink
-                            to="/"
+                            to="/upload_dataset"
                             className={({ isActive }) =>
-                                `nav-link-hover d-block px-3 py-2 text-decoration-none rounded border ${
-                                    isActive ? 'bg-primary text-white border-primary' : 'text-dark border-gray2 border-sm shadow-sm'
-                                }`
-                            }
-                        >
-                            Dashboard
-                        </NavLink>
-                    </li>
-                    <li>
-                        <NavLink
-                            to="/upload"
-                            className={({ isActive }) =>
-                                `nav-link-hover d-block px-3 py-2 text-decoration-none rounded border ${
-                                    isActive ? 'bg-primary text-white border-primary' : 'text-dark border-gray2'
+                                `nav-link-hover d-block px-3 py-2 text-decoration-none rounded border ${isActive ? 'bg-primary text-white border-primary' : 'text-dark border-gray2'
                                 }`
                             }
                         >
@@ -35,8 +30,7 @@ export default function Root() {
                         <NavLink
                             to="/configure"
                             className={({ isActive }) =>
-                                `nav-link-hover d-block px-3 py-2 text-decoration-none rounded border ${
-                                    isActive ? 'bg-primary text-white border-primary' : 'text-dark border-gray2'
+                                `nav-link-hover d-block px-3 py-2 text-decoration-none rounded border ${isActive ? 'bg-primary text-white border-primary' : 'text-dark border-gray2'
                                 }`
                             }
                         >
@@ -47,8 +41,7 @@ export default function Root() {
                         <NavLink
                             to="/annotate"
                             className={({ isActive }) =>
-                                `nav-link-hover d-block px-3 py-2 text-decoration-none rounded border ${
-                                    isActive ? 'bg-primary text-white border-primary' : 'text-dark border-gray2'
+                                `nav-link-hover d-block px-3 py-2 text-decoration-none rounded border ${isActive ? 'bg-primary text-white border-primary' : 'text-dark border-gray2'
                                 }`
                             }
                         >

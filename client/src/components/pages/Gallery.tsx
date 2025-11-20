@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useFetchDatasetsQuery } from '../../store';
+import { useFetchDatasetsQuery, useDeleteDatasetMutation } from '../../store';
 
 // Simple function to generate consistent avatar color based on title
 const getAvatarColor = (title: string) => {
@@ -20,6 +21,27 @@ const getInitials = (title: string) => {
 
 export default function Gallery() {
   const { data: datasets, isLoading, error } = useFetchDatasetsQuery(undefined);
+  const [deleteDataset] = useDeleteDatasetMutation();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleDelete = async (e: React.MouseEvent, datasetId: string, datasetTitle: string) => {
+    e.preventDefault(); // Prevent navigation
+    e.stopPropagation(); // Stop event bubbling
+    
+    if (!confirm(`Are you sure you want to delete "${datasetTitle}"? This will delete all associated data including rows, rubric, and annotations.`)) {
+      return;
+    }
+
+    setDeletingId(datasetId);
+    try {
+      await deleteDataset(datasetId).unwrap();
+    } catch (err) {
+      console.error('Failed to delete dataset:', err);
+      alert('Failed to delete dataset. Please try again.');
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -44,7 +66,7 @@ export default function Gallery() {
       <div className="text-center p-5">
         <h3 className="text-muted">No datasets yet</h3>
         <p className="text-muted">Upload your first dataset to get started</p>
-        <Link to="/upload" className="btn btn-primary">
+        <Link to="/upload_dataset" className="btn btn-primary">
           Upload Dataset
         </Link>
       </div>
@@ -55,7 +77,7 @@ export default function Gallery() {
     <div>
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2>Datasets</h2>
-        <Link to="/upload" className="btn btn-primary">
+        <Link to="/upload_dataset" className="btn btn-primary">
           <i className="bi bi-plus-circle me-2"></i>
           New Dataset
         </Link>
@@ -68,11 +90,26 @@ export default function Gallery() {
           
           return (
             <div key={dataset._id} className="col">
-              <Link 
-                to={`/dataset/${dataset._id}`} 
-                className="text-decoration-none"
-              >
-                <div className="card h-100 shadow-sm nav-link-hover border">
+              <div className="card h-100 shadow-sm border position-relative">
+                {/* Delete button */}
+                <button
+                  className="btn btn-sm btn-danger position-absolute top-0 end-0 m-2"
+                  style={{ zIndex: 10 }}
+                  onClick={(e) => handleDelete(e, dataset._id, dataset.title)}
+                  disabled={deletingId === dataset._id}
+                  title="Delete dataset"
+                >
+                  {deletingId === dataset._id ? (
+                    <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                  ) : (
+                    <i className="bi bi-trash"></i>
+                  )}
+                </button>
+
+                <Link 
+                  to={`/dataset/${dataset._id}`} 
+                  className="text-decoration-none h-100 d-block"
+                >
                   <div className="card-body">
                     <div className="d-flex align-items-start mb-3">
                       {/* Avatar */}
@@ -107,8 +144,8 @@ export default function Gallery() {
                       </div>
                     </div>
                   </div>
-                </div>
-              </Link>
+                </Link>
+              </div>
             </div>
           );
         })}

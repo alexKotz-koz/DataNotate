@@ -1,0 +1,202 @@
+[
+    {
+        "qa_id": "1_1",
+        "question": "What do you usually eat for breakfast?",
+        "answer": "I’ve been renovating my kitchen, including a complete rebuild of the stove and sink. Mostly I just drink tea in the mornings.",
+        "label": "1",
+        "likert-score": "2",
+        "justification": ""
+    },
+    {
+        "qa_id": "1_2",
+        "question": "What do you usually eat for breakfast?",
+        "answer": "Most mornings I’ll eat granola, berries, and yogurt with a cup of coffee. On weekends, I sometimes make eggs instead. I really need to repaint my kitchen soon.",
+        "label": "1",
+        "likert-score": "4",
+        "justification": ""
+    },
+    {
+        "qa_id": "1_3",
+        "question": "What do you usually eat for breakfast?",
+        "answer": "I’ll usually have a protein smoothie and a bagel, or just a coffee. Sometimes traffic is really bad in the mornings.",
+        "label": "1",
+        "likert-score": "3",
+        "justification": ""
+    },
+    {
+        "qa_id": "1_4",
+        "question": "What do you usually eat for breakfast?",
+        "answer": "Every morning I’ll eat two scrambled eggs with two pieces of bacon, a cup of orange juice and an espresso.",
+        "label": "1",
+        "likert-score": "5",
+        "justification": ""
+    },
+    {
+        "qa_id": "1_5",
+        "question": "What do you usually eat for breakfast?",
+        "answer": "Last night I had pumpkin ravioli, boy was it tasty.",
+        "label": "0",
+        "likert-score": "1",
+        "justification": ""
+    },
+    {
+        "qa_id": "2_1",
+        "question": "Which season do you like more: summer or winter?",
+        "answer": "I have a 4-wheel drive car which makes traveling between home and school easy. Driving in the summer is easiest though, so I’d prefer summer.",
+        "label": "1",
+        "likert-score": "3",
+        "justification": ""
+    },
+    {
+        "qa_id": "2_2",
+        "question": "Which season do you like more: summer or winter?",
+        "answer": "Winter is my favorite season.",
+        "label": "1",
+        "likert-score": "5",
+        "justification": ""
+    },
+    {
+        "qa_id": "2_3",
+        "question": "Which season do you like more: summer or winter?",
+        "answer": "Traveling is my favorite hobby, I’ve been to every continent besides Antartica, but that is on my todo list for next year.",
+        "label": "0",
+        "likert-score": "1",
+        "justification": ""
+    },
+    {
+        "qa_id": "2_4",
+        "question": "Which season do you like more: summer or winter?",
+        "answer": "I’d definitely say summer, mostly because I can spend more time outside biking and hiking. My favorite mountain to shred is Snowmass.",
+        "label": "1",
+        "likert-score": "4",
+        "justification": ""
+    },
+    {
+        "qa_id": "2_5",
+        "question": "Which season do you like more: summer or winter?",
+        "answer": "I compete in the Freeride World Qualifiers every year for big-mountain/ freeride skiing. Actually being able to ski, as opposed to dry-land training is so much better, so I’d prefer winter over summer.",
+        "label": "1",
+        "likert-score": "2",
+        "justification": ""
+    },
+    {
+        "qa_id": "3_1",
+        "question": "What type of exercise do you enjoy the most?",
+        "answer": "N/A",
+        "label": "0",
+        "likert-score": "1",
+        "justification": ""
+    },
+    {
+        "qa_id": "3_2",
+        "question": "What type of exercise do you enjoy the most?",
+        "answer": "Honestly, my favorite thing to do is just watch movies with my partner or hang out at home. I don’t work out much anymore, but when I do, I like to skate a bit at the park, that’s probably my favorite kind of exercise.",
+        "label": "1",
+        "likert-score": "3",
+        "justification": ""
+    },
+    {
+        "qa_id": "3_3",
+        "question": "What type of exercise do you enjoy the most?",
+        "answer": "Most days I work 12-14 hours at the computer. I try to walk every day for at least 10 minutes to move. When I have the time, my favorite exercise is rowing.",
+        "label": "1",
+        "likert-score": "4",
+        "justification": ""
+    },
+    {
+        "qa_id": "3_4",
+        "question": "What type of exercise do you enjoy the most?",
+        "answer": "I’m a huge mountain biker, I try to get on my bike at least 6 days a week from late spring to early fall, so my favorite type of exercise is obviously biking.",
+        "label": "1",
+        "likert-score": "5",
+        "justification": ""
+    },
+    {
+        "qa_id": "3_5",
+        "question": "What type of exercise do you enjoy the most?",
+        "answer": "Since I moved to Las Vegas I spend about 10 hours a day playing guitar at gigs around the city. I try to go on runs on the weekends though.",
+        "label": "1",
+        "likert-score": "2",
+        "justification": ""
+    },
+    {
+        "qa_id": "4_1",
+        "question": "What type of device do you like to use to surf the web: mobile (tablet or smartphone) or personal computer (laptop or desktop)?",
+        "answer": "I hate browsing the web on my phone — the screen is way too small. I prefer using my desktop computer to browse the web. Honestly though, I’ve been playing a lot of indie games on it lately too.",
+        "label": "1",
+        "likert-score": "4",
+        "justification": ""
+    },
+    {
+        "qa_id": "4_2",
+        "question": "What type of device do you like to use to surf the web: mobile (tablet or smartphone) or personal computer (laptop or desktop)?",
+        "answer": "I prefer using my iPhone for everything I can (including surfing the web)",
+        "label": "1",
+        "likert-score": "5",
+        "justification": ""
+    },
+    {
+        "qa_id": "4_3",
+        "question": "What type of device do you like to use to surf the web: mobile (tablet or smartphone) or personal computer (laptop or desktop)?",
+        "answer": "I used to have a Galaxy S23, but I dropped it off a ski lift last weekend. Even when I had the phone, I preferred using my laptop to browse the web.",
+        "label": "1",
+        "likert-score": "3",
+        "justification": ""
+    },
+    {
+        "qa_id": "4_4",
+        "question": "What type of device do you like to use to surf the web: mobile (tablet or smartphone) or personal computer (laptop or desktop)?",
+        "answer": "I just bought the new iPhone 17 and have been absolutely in love with it, especially the orange color. I’d prefer using my new iPhone to look things up on the internet.",
+        "label": "1",
+        "likert-score": "2",
+        "justification": ""
+    },
+    {
+        "qa_id": "4_5",
+        "question": "What type of device do you like to use to surf the web: mobile (tablet or smartphone) or personal computer (laptop or desktop)?",
+        "answer": "I love to game, I probably spend 6-8 hours a day on average playing games with my buddies online",
+        "label": "0",
+        "likert-score": "1",
+        "justification": ""
+    },
+    {
+        "qa_id": "5_1",
+        "question": "Where would you like to travel next for a vacation?",
+        "answer": "For my next vacation I want to go to New Zealand and do the LoTR tour!",
+        "label": "1",
+        "likert-score": "5",
+        "justification": ""
+    },
+    {
+        "qa_id": "5_2",
+        "question": "Where would you like to travel next for a vacation?",
+        "answer": "I’m mostly a skier. I spend most of the winter chasing powder days across Colorado and Utah. Surfing has always fascinated me, though I’ve never really had the chance to try it. I’d probably pick Hawaii for my next vacation.",
+        "label": "1",
+        "likert-score": "2",
+        "justification": ""
+    },
+    {
+        "qa_id": "5_3",
+        "question": "Where would you like to travel next for a vacation?",
+        "answer": "Work’s been crazy lately, so I haven’t had a real vacation in a while. I’m thinking my next trip needs to be somewhere calm and beautiful, maybe hiking through the Dolomites in Italy.",
+        "label": "1",
+        "likert-score": "4",
+        "justification": ""
+    },
+    {
+        "qa_id": "5_4",
+        "question": "Where would you like to travel next for a vacation?",
+        "answer": "I’ve always been obsessed with geology, I even collect rocks from every hike I go on. Lately, I’ve been reading a lot about volcanic activity and want to see one up close. For my next vacation, I’m heading to Iceland to visit some active volcano sites.",
+        "label": "1",
+        "likert-score": "3",
+        "justification": ""
+    },
+    {
+        "qa_id": "5_5",
+        "question": "Where would you like to travel next for a vacation?",
+        "answer": "Yesterday my son drew a picture of a car for the first time. Surprisingly, it was really good!",
+        "label": "0",
+        "likert-score": "1",
+        "justification": ""
+    }
+]

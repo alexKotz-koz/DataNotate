@@ -2,38 +2,35 @@ const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
 const RubricFieldSchema = new Schema({
-    name: { type: String, required: true }, //e.g., label, cr_proportion, justification
-    label: { type: String, required: true },
+    name: { type: String, required: true }, // e.g., label, justification
+    label: { type: String, required: true }, // Display label in UI
     type: { 
         type: String, 
         enum: ['string', 'number', 'boolean', 'select'], 
         default: 'string'
     },
-    required: { type: Boolean, default: true },
-    opptions: [{ type: String }] // for 'select' type
-});
+    required: { type: Boolean, default: false },
+    options: [{ type: String }], // for 'select' type
+    isDatasetColumn: { type: Boolean, default: false } // true if from dataset, false if annotation-only
+}, { _id: false });
 
 const RubricSchema = new Schema({
-    dataset: { type: Schema.Types.ObjectId, ref:'Dataset', required: true, index: true, unique: true },
-    displayColumns: [{ type: String, required: true }],
-    fields: [RubricFieldSchema],
-  _createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
-  _dateCreated: { type: Date, default: Date.now },
-  _dateUpdated: { type: Date, default: Date.now }
+    title: { type: String, required: true }, // Rubric title (e.g., "Quality Assessment", "Relevance Check")
+    dataset: { type: Schema.Types.ObjectId, ref: 'Dataset', required: true, index: true },
+    displayColumns: [{ type: String, required: true }], // Dataset columns to show to annotator
+    fields: [RubricFieldSchema], // Fields to annotate (can be from dataset or custom)
+    _createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    _dateCreated: { type: Date, default: Date.now },
+    _dateUpdated: { type: Date, default: Date.now }
 });
+
+// Index to allow multiple rubrics per dataset
+RubricSchema.index({ dataset: 1, title: 1 });
 
 RubricSchema.pre('save', function(next) {
-  this._dateUpdated = new Date();
-  next();
+    this._dateUpdated = new Date();
+    next();
 });
-/*
-What it does:
-Triggers before saving: Every time a document using this schema is saved to MongoDB (either creating or updating), this function runs automatically before the save operation completes.
-
-Updates timestamp: It sets the _dateUpdated field to the current date/time.
-
-Continues the save: Calling next() tells Mongoose to proceed with the actual save operation.
-*/
 
 module.exports = mongoose.model('Rubric', RubricSchema);
 

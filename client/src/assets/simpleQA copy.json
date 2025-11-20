@@ -1,0 +1,122 @@
+[
+  {
+    "qa_id": "1_1",
+    "question": "What is your favorite color?",
+    "answer": "My favorite color is red",
+    "label": "1",
+    "likert-score": "5",
+    "justification": ""
+  },
+  {
+    "qa_id": "1_2",
+    "question": "What is your favorite color?",
+    "answer": "Blue",
+    "label": "1",
+    "likert-score": "5",
+    "justification": ""
+  },
+  {
+    "qa_id": "1_3",
+    "question": "What is your favorite color?",
+    "answer": "I like yellow because bananas are my favorite fruit",
+    "label": "1",
+    "likert-score": "3",
+    "justification": ""
+  },
+  {
+    "qa_id": "1_4",
+    "question": "What is your favorite color?",
+    "answer": "99",
+    "label": "0",
+    "likert-score": "1",
+    "justification": ""
+  },
+  {
+    "qa_id": "1_5",
+    "question": "What is your favorite color?",
+    "answer": "Cars are cool",
+    "label": "0",
+    "likert-score": "1",
+    "justification": ""
+  },
+  {
+    "qa_id": "2_1",
+    "question": "Which season do you like more: summer or winter?",
+    "answer": "Winter",
+    "label": "1",
+    "likert-score": "5",
+    "justification": ""
+  },
+  {
+    "qa_id": "2_2",
+    "question": "Which season do you like more: summer or winter?",
+    "answer": "I like winter more than summer because my favorite sport is skiing",
+    "label": "1",
+    "likert-score": "5",
+    "justification": "2 clauses, both contextually relevant because skiing is inherintly tied to winter"
+  },
+  {
+    "qa_id": "2_3",
+    "question": "Which season do you like more: summer or winter?",
+    "answer": "I love to travel",
+    "label": "0",
+    "likert-score": "1",
+    "justification": ""
+  },
+  {
+    "qa_id": "2_4",
+    "question": "Which season do you like more: summer or winter?",
+    "answer": "Summer is much better, cold weather is miserable",
+    "label": "1",
+    "likert-score": "5",
+    "justification": "2 clauses, both contextually relevant, the second clause is describing why,which doesn't directly answer the question but is a supporting dependent clause to the first"
+  },
+  {
+    "qa_id": "2_5",
+    "question": "Which season do you like more: summer or winter?",
+    "answer": "Gaming is my favorite sport because I don’t have to move to do it",
+    "label": "0",
+    "likert-score": "1",
+    "justification": ""
+  },
+  {
+    "qa_id": "3_1",
+    "question": "What type of device do you like to use to surf the web: mobile (tablet or smartphone) or personal computer (laptop or desktop)?",
+    "answer": "I like to use my laptop to surf the web because I can actually see all of the content on all the websites I browse.",
+    "label": "1",
+    "likert-score": "5",
+    "justification": "2 clauses, both CR because the second clause is a supporting dependent clause to the first"
+  },
+  {
+    "qa_id": "3_2",
+    "question": "What type of device do you like to use to surf the web: mobile (tablet or smartphone) or personal computer (laptop or desktop)?",
+    "answer": "Sometimes when I go fast on backroads I’m concerned about being pulled over, but most of the time I don’t care and go 15 mph above the speed limit.",
+    "label": "0",
+    "likert-score": "1",
+    "justification": ""
+  },
+  {
+    "qa_id": "3_3",
+    "question": "What type of device do you like to use to surf the web: mobile (tablet or smartphone) or personal computer (laptop or desktop)?",
+    "answer": "Surfing is 5% my favorite sport",
+    "label": "0",
+    "likert-score": "1",
+    "justification": ""
+  },
+  {
+    "qa_id": "3_4",
+    "question": "What type of device do you like to use to surf the web: mobile (tablet or smartphone) or personal computer (laptop or desktop)?",
+    "answer": "My favorite animal is spiders, their webs are so fascinating",
+    "label": "0",
+    "likert-score": "1",
+    "justification": ""
+  },
+  {
+    "qa_id": "3_5",
+    "question": "What type of device do you like to use to surf the web: mobile (tablet or smartphone) or personal computer (laptop or desktop)?",
+    "answer": "I use my phone for everything, opening up my macbook like once a year, so my preference would be mobile (my iPhone)",
+    "label": "1",
+    "likert-score": "4",
+    "justification": "3 clauses, the middle once is partially CR, taken out of context the middle one is not CR, but in context it is, labeling 4% due to this abnormality; however labeling 5 would also be accurate"
+  }
+]
