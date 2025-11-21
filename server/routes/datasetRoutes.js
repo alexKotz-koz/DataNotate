@@ -22,7 +22,21 @@ const router = express.Router();
 router.get('/fetch-all', async (req, res) => {
     try {
         const datasets = await Dataset.find({}).sort({ _dateCreated: -1 });
-        res.json(datasets);
+        // Attach row counts for each dataset (simple sequential counting; optimize with aggregation if needed)
+        const counts = await Promise.all(
+            datasets.map(d => DatasetRow.countDocuments({ dataset: d._id }))
+        );
+        const enriched = datasets.map((d, idx) => ({
+            _id: d._id,
+            title: d.title,
+            description: d.description,
+            uploadType: d.uploadType,
+            columns: d.columns,
+            _createdBy: d._createdBy,
+            _dateCreated: d._dateCreated,
+            rowCount: counts[idx]
+        }));
+        res.json(enriched);
     } catch (e) {
         res.status(500).json({ error: 'Failed to fetch datasets' });
     }

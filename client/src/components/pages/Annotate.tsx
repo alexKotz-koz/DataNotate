@@ -15,7 +15,7 @@ export default function Annotate() {
   const { data: datasets } = useFetchDatasetsQuery(undefined);
   const { data: rows } = useFetchDatasetRowsQuery(datasetId || '', { skip: !datasetId });
   const { data: rubric } = useGetRubricByIdQuery(rubricId || '', { skip: !rubricId });
-  const { data: existingAnnotations } = useFetchAnnotationsByDatasetQuery(
+  const { data: aggregateAnnotations } = useFetchAnnotationsByDatasetQuery(
     { datasetId: datasetId || '', rubricId: rubricId || '' }, 
     { skip: !datasetId || !rubricId }
   );
@@ -29,19 +29,18 @@ export default function Annotate() {
   // Get current row
   const currentRow = rows?.[currentIndex];
 
-  // Check if current row has existing annotation
-  const existingAnnotation = existingAnnotations?.find(
-    (ann: any) => ann.datasetRow === currentRow?._id
-  );
+  // Aggregate annotation record and row entry
+  const aggregate = aggregateAnnotations && aggregateAnnotations.length > 0 ? aggregateAnnotations[0] : null;
+  const existingRowEntry = aggregate?.rows.find(r => r.datasetRow === currentRow?._id);
 
   // Load existing annotation when row changes
   useEffect(() => {
-    if (existingAnnotation) {
-      setFormData(existingAnnotation.annotations || {});
+    if (existingRowEntry) {
+      setFormData(existingRowEntry.values || {});
     } else {
       setFormData({});
     }
-  }, [currentRow?._id, existingAnnotation]);
+  }, [currentRow?._id, existingRowEntry]);
 
   if (!dataset || !rubric) {
     return (
@@ -71,7 +70,7 @@ export default function Annotate() {
   }
 
   const progress = ((currentIndex + 1) / rows.length) * 100;
-  const annotatedCount = existingAnnotations?.length || 0;
+  const annotatedCount = aggregate?.rows.length || 0;
 
   const handlePrevious = () => {
     if (currentIndex > 0) {
@@ -85,18 +84,28 @@ export default function Annotate() {
     }
   };
 
+  const saveCurrentRow = async () => {
+    if (!currentRow || !rubricId || !datasetId) {
+      throw new Error('Missing dataset, rubric, or row information.');
+    }
+
+    const result = await saveAnnotation({
+      datasetId,
+      rubricId,
+      datasetRowId: currentRow._id,
+      annotations: formData,
+    }).unwrap();
+
+    if (result.annotation.completed && !aggregate?.completed) {
+      alert('Rubric annotation record completed!');
+    }
+
+    return result;
+  };
+
   const handleSave = async () => {
-    if (!currentRow || !rubricId) return;
-
     try {
-      await saveAnnotation({
-        datasetId: datasetId!,
-        rubricId: rubricId!,
-        datasetRowId: currentRow._id,
-        annotations: formData,
-      }).unwrap();
-
-      // Move to next row after saving
+      await saveCurrentRow();
       if (currentIndex < rows.length - 1) {
         setCurrentIndex(currentIndex + 1);
       }
@@ -106,8 +115,14 @@ export default function Annotate() {
     }
   };
 
-  const handleSubmit = () => {
-    navigate('/');
+  const handleSubmit = async () => {
+    try {
+      await saveCurrentRow();
+      navigate('/');
+    } catch (err) {
+      console.error('Failed to submit annotation:', err);
+      alert('Failed to submit annotation. Please try again.');
+    }
   };
 
   // Check if we're on the last row
@@ -158,7 +173,7 @@ export default function Annotate() {
           <div className="card shadow-sm">
             <div className="card-header bg-white d-flex justify-content-between align-items-center">
               <h5 className="mb-0">Data Row</h5>
-              {existingAnnotation && (
+              {existingRowEntry && (
                 <span className="badge bg-success">Previously Annotated</span>
               )}
             </div>
@@ -242,9 +257,19 @@ export default function Annotate() {
                 <button
                   className="btn btn-success w-100 mt-4"
                   onClick={handleSubmit}
+                  disabled={isSaving}
                 >
-                  <i className="bi bi-check-circle me-2"></i>
-                  Submit Annotation
+                  {isSaving ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <i className="bi bi-check-circle me-2"></i>
+                      Submit Annotation
+                    </>
+                  )}
                 </button>
               ) : (
                 <>

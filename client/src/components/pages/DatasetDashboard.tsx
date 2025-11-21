@@ -27,7 +27,7 @@ function RubricItem({ rubric, datasetId }: { rubric: Rubric; datasetId: string }
         <div>
           <h6 className="mb-1">{rubric.title}</h6>
           <small className="text-muted">
-            {stats?.annotatedRows || 0} of {stats?.totalRows || 0} rows annotated
+            {(stats?.annotationRecords || 0)} records ({stats?.completedRecords || 0} completed), avg {stats?.averageRowsAnnotated || 0} rows
           </small>
         </div>
       </div>
@@ -38,13 +38,13 @@ function RubricItem({ rubric, datasetId }: { rubric: Rubric; datasetId: string }
         >
           <i className="bi bi-pencil-square me-1"></i>Annotate
         </Link>
-        {(stats?.annotatedRows || 0) > 0 && (
+        {(stats?.annotationRecords || 0) > 0 && (
           <button 
             onClick={handleDownload}
             className="btn btn-sm btn-outline-success"
           >
             <i className="bi bi-download me-1"></i>
-            Download ({stats?.annotatedRows})
+            Download ({stats?.annotationRecords})
           </button>
         )}
       </div>
@@ -75,7 +75,8 @@ export default function DatasetDashboard() {
   const hasRubrics = rubrics && rubrics.length > 0;
   const rowCount = rows?.length || 0;
   const columnCount = dataset.columns?.length || 0;
-  const totalAnnotations = aggregateStats?.totalAnnotations || 0;
+  const annotationRecordCount = aggregateStats?.annotationRecordCount || 0;
+  const completedRecordCount = aggregateStats?.completedRecordCount || 0;
   const rubricCount = rubrics?.length || 0;
 
   return (
@@ -139,8 +140,8 @@ export default function DatasetDashboard() {
                   <i className="bi bi-clipboard-check text-warning fs-4"></i>
                 </div>
                 <div className="ms-3">
-                  <h3 className="mb-0">{totalAnnotations}</h3>
-                  <small className="text-muted">Total Annotations</small>
+                  <h3 className="mb-0">{annotationRecordCount}</h3>
+                  <small className="text-muted">Annotation Records{completedRecordCount ? ` (${completedRecordCount} completed)` : ''}</small>
                 </div>
               </div>
             </div>

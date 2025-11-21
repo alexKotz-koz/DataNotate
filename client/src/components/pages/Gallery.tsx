@@ -139,7 +139,7 @@ export default function Gallery() {
                         <small className="text-muted">Columns</small>
                       </div>
                       <div className="text-center">
-                        <div className="fw-bold text-success">—</div>
+                        <div className="fw-bold text-success">{dataset.rowCount ?? 0}</div>
                         <small className="text-muted">Rows</small>
                       </div>
                     </div>

@@ -50,43 +50,55 @@ router.get('/by-row/:datasetRowId', async (req, res) => {
  * Body: { datasetId, rubricId, datasetRowId, annotations: {...} }
  * Create or update an annotation for a dataset row with a specific rubric
  */
+// Save (append/update) a single row's annotation inside the aggregate annotation record
 router.post('/save', async (req, res) => {
   try {
     const { datasetId, rubricId, datasetRowId, annotations } = req.body;
-
     if (!datasetId || !rubricId || !datasetRowId || !annotations) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Verify the row exists and belongs to the dataset
     const row = await DatasetRow.findOne({ _id: datasetRowId, dataset: datasetId });
-    if (!row) {
-      return res.status(404).json({ error: 'Dataset row not found' });
-    }
-
-    // Verify rubric exists
+    if (!row) return res.status(404).json({ error: 'Dataset row not found' });
     const rubric = await Rubric.findById(rubricId);
-    if (!rubric) {
-      return res.status(404).json({ error: 'Rubric not found' });
-    }
+    if (!rubric) return res.status(404).json({ error: 'Rubric not found' });
 
-    // Upsert the annotation (one per row per rubric per annotator)
-    const annotation = await Annotation.findOneAndUpdate(
-      { datasetRow: datasetRowId, rubric: rubricId, _annotator: req.user?._id || null },
-      {
+    const annotatorId = req.user?._id || null; // null if unauthenticated
+
+    // Find or create aggregate annotation record
+    let aggregate = await Annotation.findOne({ dataset: datasetId, rubric: rubricId, _annotator: annotatorId });
+    if (!aggregate) {
+      aggregate = await Annotation.create({
         dataset: datasetId,
         rubric: rubricId,
-        datasetRow: datasetRowId,
-        annotations,
-        _annotator: req.user?._id || null,
-        _dateUpdated: new Date()
-      },
-      { new: true, upsert: true, setDefaultsOnInsert: true }
-    );
+        _annotator: annotatorId,
+        rows: [],
+        targetRowCount: 25 // could derive from rubric or config later
+      });
+    }
 
-    res.json({ success: true, annotation });
+    // Update or append row annotation inside aggregate
+    const existingIndex = aggregate.rows.findIndex(r => r.datasetRow.toString() === datasetRowId);
+    if (existingIndex >= 0) {
+      aggregate.rows[existingIndex].values = annotations;
+      aggregate.rows[existingIndex]._dateAnnotated = new Date();
+    } else {
+      aggregate.rows.push({ datasetRow: datasetRowId, values: annotations });
+    }
+
+    // Mark completed if threshold reached
+    if (aggregate.rows.length >= aggregate.targetRowCount) {
+      aggregate.completed = true;
+    }
+    aggregate._dateUpdated = new Date();
+    await aggregate.save();
+
+    // Populate minimal for client convenience
+    const populated = await aggregate.populate({ path: 'rows.datasetRow', select: 'data' });
+
+    res.json({ success: true, annotation: populated });
   } catch (e) {
-    console.error('Error saving annotation:', e);
+    console.error('Error saving aggregate annotation:', e);
     res.status(500).json({ error: 'Failed to save annotation' });
   }
 });
@@ -119,48 +131,94 @@ router.get('/stats/:datasetId', async (req, res) => {
   try {
     const { datasetId } = req.params;
     const { rubricId } = req.query;
-    
     const totalRows = await DatasetRow.countDocuments({ dataset: datasetId });
-    
+
     if (rubricId) {
-      // Stats for specific rubric
+      // Per-rubric stats (aggregate annotations)
       const rubric = await Rubric.findById(rubricId);
-      if (!rubric) {
-        return res.status(404).json({ error: 'Rubric not found' });
-      }
-      
-      const annotations = await Annotation.find({ dataset: datasetId, rubric: rubricId });
-      const requiredFields = rubric.fields.filter(f => f.required).map(f => f.name);
-      const completeAnnotations = annotations.filter(annotation => {
-        return requiredFields.every(fieldName => {
-          const value = annotation.annotations[fieldName];
-          return value !== undefined && value !== null && value !== '';
-        });
-      });
-      
-      const annotatedRows = completeAnnotations.length;
-      
+      if (!rubric) return res.status(404).json({ error: 'Rubric not found' });
+      const annotationRecords = await Annotation.find({ dataset: datasetId, rubric: rubricId });
+      const completedCount = annotationRecords.filter(a => a.completed).length;
+      const averageRowsAnnotated = annotationRecords.length
+        ? Math.round(annotationRecords.reduce((sum, a) => sum + a.rows.length, 0) / annotationRecords.length)
+        : 0;
       return res.json({
         totalRows,
-        annotatedRows,
-        remainingRows: totalRows - annotatedRows,
-        percentComplete: totalRows > 0 ? (annotatedRows / totalRows) * 100 : 0
+        annotationRecords: annotationRecords.length,
+        completedRecords: completedCount,
+        averageRowsAnnotated,
+        percentCompletionAverage: rubric && rubric.fields.length && annotationRecords.length
+          ? (averageRowsAnnotated / (annotationRecords[0]?.targetRowCount || 25)) * 100
+          : 0
       });
     }
-    
-    // Stats across all rubrics
+
+    // Dataset-level stats across all rubrics
     const rubrics = await Rubric.find({ dataset: datasetId });
-    const annotations = await Annotation.find({ dataset: datasetId });
-    
+    const annotationRecords = await Annotation.find({ dataset: datasetId });
+    const completedCount = annotationRecords.filter(a => a.completed).length;
     res.json({
       totalRows,
-      totalAnnotations: annotations.length,
-      rubricCount: rubrics.length
+      rubricCount: rubrics.length,
+      annotationRecordCount: annotationRecords.length,
+      completedRecordCount: completedCount
     });
   } catch (e) {
+    console.error('Error fetching stats:', e);
     res.status(500).json({ error: 'Failed to fetch stats' });
   }
 });
+
+const formatAnnotationExport = (annotation) => {
+  const displayColumns = Array.isArray(annotation?.rubric?.displayColumns)
+    ? annotation.rubric.displayColumns
+    : [];
+  const rubricFieldNames = Array.isArray(annotation?.rubric?.fields)
+    ? annotation.rubric.fields.map(f => f.name).filter(Boolean)
+    : [];
+
+  const projectDisplayColumns = (row) => {
+    const data = row.datasetRow?.data || {};
+    return displayColumns.reduce((acc, column) => {
+      if (Object.prototype.hasOwnProperty.call(data, column)) {
+        acc[column] = data[column];
+      }
+      return acc;
+    }, {});
+  };
+
+  const projectRubricFields = (row) => {
+    const values = row.values || {};
+    return rubricFieldNames.reduce((acc, name) => {
+      if (Object.prototype.hasOwnProperty.call(values, name)) {
+        acc[name] = values[name];
+      }
+      return acc;
+    }, {});
+  };
+
+  return {
+    metadata: {
+      datasetId: annotation.dataset?._id,
+      rubricId: annotation.rubric?._id,
+      annotationId: annotation._id,
+      datasetTitle: annotation.dataset?.title,
+      datasetDescription: annotation.dataset?.description,
+      rubricTitle: annotation.rubric?.title,
+      annotator: annotation._annotator,
+      rowCount: annotation.rows?.length || 0,
+      completed: annotation.completed,
+      dateCreated: annotation._dateCreated,
+      dateUpdated: annotation._dateUpdated
+    },
+    annotations: (annotation.rows || []).map((row) => ({
+      datasetRowId: row.datasetRow?._id,
+      display: projectDisplayColumns(row),
+      rubric: projectRubricFields(row),
+      dateAnnotated: row._dateAnnotated
+    }))
+  };
+};
 
 /**
  * GET /api/annotation/download/:annotationId
@@ -169,35 +227,18 @@ router.get('/stats/:datasetId', async (req, res) => {
 router.get('/download/:annotationId', async (req, res) => {
   try {
     const { annotationId } = req.params;
-    
+    // Populate aggregate rows
     const annotation = await Annotation.findById(annotationId)
       .populate('dataset')
       .populate('rubric')
-      .populate('datasetRow');
-    
+      .populate({ path: 'rows.datasetRow', select: 'data' });
+
     if (!annotation) {
       return res.status(404).json({ error: 'Annotation not found' });
     }
-    
-    // Build output format matching the template
-    const output = {
-      metadata: {
-        datasetId: annotation.dataset._id,
-        datasetTitle: annotation.dataset.title,
-        datasetDescription: annotation.dataset.description,
-        rubricId: annotation.rubric._id,
-        rubricTitle: annotation.rubric.title,
-        annotationId: annotation._id,
-        annotator: annotation._annotator,
-        dateCreated: annotation._dateCreated,
-        dateUpdated: annotation._dateUpdated
-      },
-      data: {
-        ...annotation.datasetRow.data,
-        ...annotation.annotations
-      }
-    };
-    
+
+    const output = formatAnnotationExport(annotation);
+
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Content-Disposition', `attachment; filename="annotation_${annotation._id}.json"`);
     res.json(output);
@@ -221,34 +262,17 @@ router.get('/download-bulk/:datasetId', async (req, res) => {
     if (rubricId) {
       query.rubric = rubricId;
     }
-    
+    // Populate aggregate rows for each annotation record
     const annotations = await Annotation.find(query)
       .populate('dataset')
       .populate('rubric')
-      .populate('datasetRow');
-    
+      .populate({ path: 'rows.datasetRow', select: 'data' });
+
     if (annotations.length === 0) {
       return res.status(404).json({ error: 'No annotations found' });
     }
-    
-    // Build output array
-    const output = annotations.map(annotation => ({
-      metadata: {
-        datasetId: annotation.dataset._id,
-        datasetTitle: annotation.dataset.title,
-        datasetDescription: annotation.dataset.description,
-        rubricId: annotation.rubric._id,
-        rubricTitle: annotation.rubric.title,
-        annotationId: annotation._id,
-        annotator: annotation._annotator,
-        dateCreated: annotation._dateCreated,
-        dateUpdated: annotation._dateUpdated
-      },
-      data: {
-        ...annotation.datasetRow.data,
-        ...annotation.annotations
-      }
-    }));
+
+    const output = annotations.map(formatAnnotationExport);
     
     const filename = rubricId 
       ? `annotations_${datasetId}_${rubricId}.json`

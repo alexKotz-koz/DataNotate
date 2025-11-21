@@ -8,6 +8,7 @@ export interface Dataset {
   columns: string[];
   _createdBy?: string | null;
   _dateCreated?: string;
+  rowCount?: number; // added for gallery display
 }
 
 export interface DatasetRow {
@@ -41,20 +42,26 @@ export interface Annotation {
   _id: string;
   dataset: string;
   rubric: string | { _id: string; title: string };
-  datasetRow: string;
-  annotations: Record<string, any>;
+  rows: Array<{ datasetRow: string; values: Record<string, any>; _dateAnnotated?: string }>;
+  completed?: boolean;
+  targetRowCount?: number;
   _annotator?: string | null;
   _dateCreated?: string;
   _dateUpdated?: string;
 }
 
 export interface AnnotationStats {
+  // Common
   totalRows: number;
-  annotatedRows?: number;
-  remainingRows?: number;
-  percentComplete?: number;
-  totalAnnotations?: number;
-  rubricCount?: number;
+  rubricCount?: number; // dataset-level only
+  // Dataset-level aggregate annotation stats
+  annotationRecordCount?: number;
+  completedRecordCount?: number;
+  // Per-rubric aggregate stats
+  annotationRecords?: number;
+  completedRecords?: number;
+  averageRowsAnnotated?: number;
+  percentCompletionAverage?: number;
 }
 
 export const datasetApi = createApi({
@@ -132,12 +139,8 @@ export const datasetApi = createApi({
         method: 'GET' 
       }),
     }),
-    fetchAnnotationByRow: builder.query<Annotation | null, string>({
-      providesTags: (_result, _error, rowId) => [{ type: 'Annotation', id: rowId }],
-      query: (datasetRowId) => ({ url: `/annotation/by-row/${datasetRowId}`, method: 'GET' }),
-    }),
     saveAnnotation: builder.mutation<
-      { success: boolean; annotation: Annotation }, 
+      { success: boolean; annotation: Annotation },
       { datasetId: string; rubricId: string; datasetRowId: string; annotations: Record<string, any> }
     >({
       invalidatesTags: (_result, _error, arg) => [
@@ -174,7 +177,6 @@ export const {
   useUpdateRubricMutation,
   useDeleteRubricMutation,
   useFetchAnnotationsByDatasetQuery,
-  useFetchAnnotationByRowQuery,
   useSaveAnnotationMutation,
   useDeleteAnnotationMutation,
   useFetchAnnotationStatsQuery,
