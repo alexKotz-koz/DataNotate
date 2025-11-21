@@ -1,5 +1,6 @@
 const express = require('express');
 const mongoose = require('mongoose');
+const { requireAuth, requireRoles } = require('../middleware/auth');
 
 const Annotation = mongoose.model('Annotation');
 const DatasetRow = mongoose.model('DatasetRow');
@@ -8,24 +9,46 @@ const Rubric = mongoose.model('Rubric');
 
 const router = express.Router();
 
+const getDatasetRowCount = async (datasetId) => DatasetRow.countDocuments({ dataset: datasetId });
+
 /**
  * GET /api/annotation/by-dataset/:datasetId
  * Return all annotations for a dataset (optionally filter by rubric)
  */
-router.get('/by-dataset/:datasetId', async (req, res) => {
+router.get('/by-dataset/:datasetId', requireAuth, async (req, res) => {
   try {
     const { datasetId } = req.params;
-    const { rubricId } = req.query;
+    const { rubricId, mine, annotatorId, annotationId } = req.query;
     
     const query = { dataset: datasetId };
     if (rubricId) {
       query.rubric = rubricId;
     }
+    if (annotationId) {
+      query._id = annotationId;
+    }
+    if (mine === 'true' && req.user?._id) {
+      query._annotator = req.user._id;
+    } else if (annotatorId) {
+      query._annotator = annotatorId;
+    }
     
     const annotations = await Annotation.find(query)
       .populate('rubric', 'title')
+      .populate('_annotator', 'username firstName lastName role')
       .sort({ _dateCreated: 1 });
-    res.json(annotations);
+    const totalRows = await getDatasetRowCount(datasetId);
+    const normalized = await Promise.all(annotations.map(async (annotation) => {
+      const desiredCompletion = annotation.rows.length >= totalRows;
+      const requiresUpdate = annotation.targetRowCount !== totalRows || annotation.completed !== desiredCompletion;
+      if (requiresUpdate) {
+        annotation.targetRowCount = totalRows;
+        annotation.completed = desiredCompletion;
+        await annotation.save();
+      }
+      return annotation;
+    }));
+    res.json(normalized);
   } catch (e) {
     res.status(500).json({ error: 'Failed to fetch annotations' });
   }
@@ -35,7 +58,7 @@ router.get('/by-dataset/:datasetId', async (req, res) => {
  * GET /api/annotation/by-row/:datasetRowId
  * Return annotation for a specific row
  */
-router.get('/by-row/:datasetRowId', async (req, res) => {
+router.get('/by-row/:datasetRowId', requireAuth, async (req, res) => {
   try {
     const { datasetRowId } = req.params;
     const annotation = await Annotation.findOne({ datasetRow: datasetRowId });
@@ -51,9 +74,9 @@ router.get('/by-row/:datasetRowId', async (req, res) => {
  * Create or update an annotation for a dataset row with a specific rubric
  */
 // Save (append/update) a single row's annotation inside the aggregate annotation record
-router.post('/save', async (req, res) => {
+router.post('/save', requireAuth, async (req, res) => {
   try {
-    const { datasetId, rubricId, datasetRowId, annotations } = req.body;
+    const { datasetId, rubricId, datasetRowId, annotations, annotationId } = req.body;
     if (!datasetId || !rubricId || !datasetRowId || !annotations) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
@@ -63,18 +86,40 @@ router.post('/save', async (req, res) => {
     const rubric = await Rubric.findById(rubricId);
     if (!rubric) return res.status(404).json({ error: 'Rubric not found' });
 
-    const annotatorId = req.user?._id || null; // null if unauthenticated
+    const annotatorId = req.user?._id || null;
+    const totalRows = await getDatasetRowCount(datasetId);
 
     // Find or create aggregate annotation record
-    let aggregate = await Annotation.findOne({ dataset: datasetId, rubric: rubricId, _annotator: annotatorId });
+    let aggregate;
+    if (annotationId) {
+      aggregate = await Annotation.findOne({ _id: annotationId, dataset: datasetId, rubric: rubricId });
+      if (!aggregate) {
+        return res.status(404).json({ error: 'Annotation session not found' });
+      }
+
+      const isOwner = annotatorId && aggregate._annotator && aggregate._annotator.toString() === annotatorId.toString();
+      const privileged = req.user?.role === 'admin' || req.user?.role === 'researcher';
+      if (!isOwner && !privileged) {
+        return res.status(403).json({ error: 'Cannot modify this annotation session' });
+      }
+    } else {
+      const baseQuery = { dataset: datasetId, rubric: rubricId };
+      if (annotatorId) baseQuery._annotator = annotatorId;
+      aggregate = await Annotation.findOne(baseQuery);
+    }
+
     if (!aggregate) {
       aggregate = await Annotation.create({
         dataset: datasetId,
         rubric: rubricId,
         _annotator: annotatorId,
         rows: [],
-        targetRowCount: 25 // could derive from rubric or config later
+        targetRowCount: totalRows
       });
+    }
+
+    if (aggregate.targetRowCount !== totalRows) {
+      aggregate.targetRowCount = totalRows;
     }
 
     // Update or append row annotation inside aggregate
@@ -87,9 +132,7 @@ router.post('/save', async (req, res) => {
     }
 
     // Mark completed if threshold reached
-    if (aggregate.rows.length >= aggregate.targetRowCount) {
-      aggregate.completed = true;
-    }
+    aggregate.completed = aggregate.rows.length >= aggregate.targetRowCount;
     aggregate._dateUpdated = new Date();
     await aggregate.save();
 
@@ -103,11 +146,43 @@ router.post('/save', async (req, res) => {
   }
 });
 
+// Create a new annotation session for the current user
+router.post('/session', requireAuth, async (req, res) => {
+  try {
+    const { datasetId, rubricId, sessionLabel } = req.body;
+    if (!datasetId || !rubricId) {
+      return res.status(400).json({ error: 'datasetId and rubricId are required' });
+    }
+
+    const dataset = await Dataset.findById(datasetId);
+    if (!dataset) return res.status(404).json({ error: 'Dataset not found' });
+    const rubric = await Rubric.findById(rubricId);
+    if (!rubric) return res.status(404).json({ error: 'Rubric not found' });
+
+    const annotatorId = req.user?._id || null;
+    const totalRows = await getDatasetRowCount(datasetId);
+    const annotation = await Annotation.create({
+      dataset: datasetId,
+      rubric: rubricId,
+      _annotator: annotatorId,
+      sessionLabel: sessionLabel || '',
+      rows: [],
+      targetRowCount: totalRows
+    });
+
+    const populated = await annotation.populate('rubric', 'title');
+    res.status(201).json({ success: true, annotation: populated });
+  } catch (e) {
+    console.error('Error creating annotation session:', e);
+    res.status(500).json({ error: 'Failed to create annotation session' });
+  }
+});
+
 /**
  * DELETE /api/annotation/:annotationId
  * Delete an annotation
  */
-router.delete('/:annotationId', async (req, res) => {
+router.delete('/:annotationId', requireRoles('researcher'), async (req, res) => {
   try {
     const { annotationId } = req.params;
     const result = await Annotation.findByIdAndDelete(annotationId);
@@ -127,7 +202,7 @@ router.delete('/:annotationId', async (req, res) => {
  * Return statistics for a dataset's annotations (optionally filtered by rubric)
  * Only counts annotations where all required rubric fields are completed
  */
-router.get('/stats/:datasetId', async (req, res) => {
+router.get('/stats/:datasetId', requireRoles('researcher'), async (req, res) => {
   try {
     const { datasetId } = req.params;
     const { rubricId } = req.query;
@@ -224,7 +299,7 @@ const formatAnnotationExport = (annotation) => {
  * GET /api/annotation/download/:annotationId
  * Download a single annotation as JSON with dataset metadata
  */
-router.get('/download/:annotationId', async (req, res) => {
+router.get('/download/:annotationId', requireRoles('researcher'), async (req, res) => {
   try {
     const { annotationId } = req.params;
     // Populate aggregate rows
@@ -253,7 +328,7 @@ router.get('/download/:annotationId', async (req, res) => {
  * Download all annotations for a dataset (optionally filtered by rubric)
  * Returns array of annotation objects with metadata
  */
-router.get('/download-bulk/:datasetId', async (req, res) => {
+router.get('/download-bulk/:datasetId', requireRoles('researcher'), async (req, res) => {
   try {
     const { datasetId } = req.params;
     const { rubricId } = req.query;

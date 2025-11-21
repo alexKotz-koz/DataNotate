@@ -1,29 +1,41 @@
 const mongoose = require('mongoose');
-const Schema = mongoose.Schema;
+const { Schema } = mongoose;
 const bcrypt = require('bcrypt');
 const SALT_WORK_FACTOR = 10;
 
+const roles = ['admin', 'researcher', 'annotator'];
+
 const UserSchema = new Schema({
-  googleId: String,
-  username: { type: String, required: true, index: { unique: true } },
-  password: String,
-  firstName: { type: String}, 
-  lastName: { type: String},
-  email: { type: String, required: true, index: { unique: true } },
-  role: {
-    type: String,
-    enum: ['facilitator', 'participant', 'admin'],
-    required: true
-  },
-  //notifications: [{ type: Schema.Types.ObjectId, ref: 'Notification' }],
-  avatar: { type: String },
-  firstLogin: { type: Boolean, required: true, default: true},
-  jobRole: { type: String },
-  jobDepartment: { type: String },
-  jobYears: {type: String},
-  cohort: {type: String},
+  username: { type: String, required: true, unique: true, trim: true },
+  password: { type: String, required: true },
+  email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+  firstName: { type: String, trim: true },
+  lastName: { type: String, trim: true },
+  organization: { type: String, trim: true },
+  role: { type: String, enum: roles, required: true, default: 'annotator' },
+  _dateCreated: { type: Date, default: Date.now },
+  _dateUpdated: { type: Date, default: Date.now }
 });
 
+UserSchema.pre('save', function(next) {
+  if (!this.isModified('password')) {
+    this._dateUpdated = new Date();
+    return next();
+  }
 
+  bcrypt.genSalt(SALT_WORK_FACTOR, (err, salt) => {
+    if (err) return next(err);
+    bcrypt.hash(this.password, salt, (hashErr, hash) => {
+      if (hashErr) return next(hashErr);
+      this.password = hash;
+      this._dateUpdated = new Date();
+      next();
+    });
+  });
+});
+
+UserSchema.methods.comparePassword = function(candidatePassword) {
+  return bcrypt.compare(candidatePassword, this.password);
+};
 
 mongoose.model('User', UserSchema);

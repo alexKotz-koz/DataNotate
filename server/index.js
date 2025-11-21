@@ -40,10 +40,14 @@ app.use(
     })
 );
 
+app.use(passport.initialize());
+app.use(passport.session());
+
 /* API Routes */
 app.use('/api/dataset', require('./routes/datasetRoutes'));
 app.use('/api/rubric', require('./routes/rubricRoutes'));
 app.use('/api/annotation', require('./routes/annotationRoutes'));
+app.use('/api/auth', require('./routes/authRoutes'));
 
 /* Generic error handling middleware */
 app.use((err, req, res, next) => {

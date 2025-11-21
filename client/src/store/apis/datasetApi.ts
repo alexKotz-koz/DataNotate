@@ -42,10 +42,21 @@ export interface Annotation {
   _id: string;
   dataset: string;
   rubric: string | { _id: string; title: string };
-  rows: Array<{ datasetRow: string; values: Record<string, any>; _dateAnnotated?: string }>;
+  rows: Array<{ datasetRow: string | { _id: string; data: Record<string, unknown> }; values: Record<string, any>; _dateAnnotated?: string }>;
   completed?: boolean;
   targetRowCount?: number;
-  _annotator?: string | null;
+  _annotator?:
+    | string
+    | {
+        _id: string;
+        username: string;
+        firstName?: string;
+        lastName?: string;
+        role?: string;
+      }
+    | null;
+  sessionLabel?: string;
+  sessionNumber?: number;
   _dateCreated?: string;
   _dateUpdated?: string;
 }
@@ -66,7 +77,7 @@ export interface AnnotationStats {
 
 export const datasetApi = createApi({
   reducerPath: 'datasetApi',
-  baseQuery: fetchBaseQuery({ baseUrl: '/api' }),
+  baseQuery: fetchBaseQuery({ baseUrl: '/api', credentials: 'include' }),
   tagTypes: ['Dataset', 'DatasetRows', 'Rubric', 'Annotation'],
   endpoints: (builder) => ({
     
@@ -130,18 +141,26 @@ export const datasetApi = createApi({
     }),
     
     // Annotation endpoints
-    fetchAnnotationsByDataset: builder.query<Annotation[], { datasetId: string; rubricId?: string }>({
+    fetchAnnotationsByDataset: builder.query<Annotation[], { datasetId: string; rubricId?: string; mine?: boolean; annotatorId?: string; annotationId?: string }>({
       providesTags: (_result, _error, { datasetId, rubricId }) => [
         { type: 'Annotation', id: rubricId || datasetId }
       ],
-      query: ({ datasetId, rubricId }) => ({ 
-        url: `/annotation/by-dataset/${datasetId}${rubricId ? `?rubricId=${rubricId}` : ''}`, 
-        method: 'GET' 
-      }),
+      query: ({ datasetId, rubricId, mine, annotatorId, annotationId }) => {
+        const params = new URLSearchParams();
+        if (rubricId) params.set('rubricId', rubricId);
+        if (mine) params.set('mine', 'true');
+        if (annotatorId) params.set('annotatorId', annotatorId);
+        if (annotationId) params.set('annotationId', annotationId);
+        const queryString = params.toString();
+        return { 
+          url: `/annotation/by-dataset/${datasetId}${queryString ? `?${queryString}` : ''}`, 
+          method: 'GET' 
+        };
+      },
     }),
     saveAnnotation: builder.mutation<
       { success: boolean; annotation: Annotation },
-      { datasetId: string; rubricId: string; datasetRowId: string; annotations: Record<string, any> }
+      { datasetId: string; rubricId: string; datasetRowId: string; annotations: Record<string, any>; annotationId?: string }
     >({
       invalidatesTags: (_result, _error, arg) => [
         { type: 'Annotation', id: arg.datasetId },
@@ -149,6 +168,16 @@ export const datasetApi = createApi({
         { type: 'Annotation', id: arg.datasetRowId }
       ],
       query: (body) => ({ url: '/annotation/save', method: 'POST', body }),
+    }),
+    createAnnotationSession: builder.mutation<
+      { success: boolean; annotation: Annotation },
+      { datasetId: string; rubricId: string; sessionLabel?: string }
+    >({
+      invalidatesTags: (_result, _error, arg) => [
+        { type: 'Annotation', id: arg.datasetId },
+        { type: 'Annotation', id: arg.rubricId }
+      ],
+      query: (body) => ({ url: '/annotation/session', method: 'POST', body })
     }),
     deleteAnnotation: builder.mutation<{ success: boolean }, string>({
       invalidatesTags: ['Annotation'],
@@ -178,6 +207,7 @@ export const {
   useDeleteRubricMutation,
   useFetchAnnotationsByDatasetQuery,
   useSaveAnnotationMutation,
+  useCreateAnnotationSessionMutation,
   useDeleteAnnotationMutation,
   useFetchAnnotationStatsQuery,
 } = datasetApi;

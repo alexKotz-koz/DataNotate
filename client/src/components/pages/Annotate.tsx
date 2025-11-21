@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useMemo } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   useFetchDatasetsQuery,
   useFetchDatasetRowsQuery,
@@ -11,12 +11,14 @@ import {
 export default function Annotate() {
   const { datasetId, rubricId } = useParams<{ datasetId: string; rubricId: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const annotationSessionId = searchParams.get('session') || undefined;
 
   const { data: datasets } = useFetchDatasetsQuery(undefined);
   const { data: rows } = useFetchDatasetRowsQuery(datasetId || '', { skip: !datasetId });
   const { data: rubric } = useGetRubricByIdQuery(rubricId || '', { skip: !rubricId });
   const { data: aggregateAnnotations } = useFetchAnnotationsByDatasetQuery(
-    { datasetId: datasetId || '', rubricId: rubricId || '' }, 
+    { datasetId: datasetId || '', rubricId: rubricId || '', mine: true, annotationId: annotationSessionId }, 
     { skip: !datasetId || !rubricId }
   );
   const [saveAnnotation, { isLoading: isSaving }] = useSaveAnnotationMutation();
@@ -30,8 +32,18 @@ export default function Annotate() {
   const currentRow = rows?.[currentIndex];
 
   // Aggregate annotation record and row entry
-  const aggregate = aggregateAnnotations && aggregateAnnotations.length > 0 ? aggregateAnnotations[0] : null;
-  const existingRowEntry = aggregate?.rows.find(r => r.datasetRow === currentRow?._id);
+  const aggregate = useMemo(() => {
+    if (!aggregateAnnotations || aggregateAnnotations.length === 0) return null;
+    if (annotationSessionId) {
+      const match = aggregateAnnotations.find(a => a._id === annotationSessionId);
+      if (match) return match;
+    }
+    return aggregateAnnotations[0];
+  }, [aggregateAnnotations, annotationSessionId]);
+  const existingRowEntry = aggregate?.rows.find(r => {
+    const rowId = typeof r.datasetRow === 'string' ? r.datasetRow : r.datasetRow?._id;
+    return rowId === currentRow?._id;
+  });
 
   // Load existing annotation when row changes
   useEffect(() => {
@@ -94,7 +106,12 @@ export default function Annotate() {
       rubricId,
       datasetRowId: currentRow._id,
       annotations: formData,
+      annotationId: aggregate?._id || annotationSessionId,
     }).unwrap();
+
+    if (!annotationSessionId) {
+      setSearchParams({ session: result.annotation._id });
+    }
 
     if (result.annotation.completed && !aggregate?.completed) {
       alert('Rubric annotation record completed!');
@@ -118,7 +135,7 @@ export default function Annotate() {
   const handleSubmit = async () => {
     try {
       await saveCurrentRow();
-      navigate('/');
+      navigate('/annotator');
     } catch (err) {
       console.error('Failed to submit annotation:', err);
       alert('Failed to submit annotation. Please try again.');

@@ -8,6 +8,7 @@ const fs = require('fs');
     - unlinkSync(filePath): Deletes temporary uploaded file from dis immediately, keeps uploads dir clean
 */
 const csv = require('csv-parser');
+const { requireAuth, requireRoles } = require('../middleware/auth');
 
 const Dataset = mongoose.model('Dataset');
 const DatasetRow = mongoose.model('DatasetRow');
@@ -19,7 +20,7 @@ const router = express.Router();
  * GET /api/dataset/fetch-all
  * Return all datasets (metadata only)
  */
-router.get('/fetch-all', async (req, res) => {
+router.get('/fetch-all', requireAuth, async (req, res) => {
     try {
         const datasets = await Dataset.find({}).sort({ _dateCreated: -1 });
         // Attach row counts for each dataset (simple sequential counting; optimize with aggregation if needed)
@@ -46,7 +47,7 @@ router.get('/fetch-all', async (req, res) => {
  * GET /api/dataset/:id/rows
  * Return rows for a dataset
  */
-router.get('/:id/rows', async (req, res) => {
+router.get('/:id/rows', requireAuth, async (req, res) => {
     try {
         const { id } = req.params;
         const rows = await DatasetRow.find({ dataset: id }).limit(1000);
@@ -60,7 +61,7 @@ router.get('/:id/rows', async (req, res) => {
  * POST /api/dataset/upload
  * Accept FormData: file, title, description, uploadType
  */
-router.post('/upload', upload.single('file'), async (req, res) => {
+router.post('/upload', requireRoles('researcher'), upload.single('file'), async (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'File missing' });
 
     const { title, description, uploadType } = req.body;
@@ -98,7 +99,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
             description,
             uploadType,
             columns,
-            _createdBy: null
+            _createdBy: req.user?._id || null
         });
 
         const docs = rawRows.map(r => ({
@@ -123,7 +124,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
  * DELETE /api/dataset/:id
  * Delete a dataset and all associated data (rows, rubric, annotations)
  */
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireRoles('researcher'), async (req, res) => {
     try {
         const { id } = req.params;
 

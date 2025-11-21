@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useFetchDatasetsQuery, useDeleteDatasetMutation } from '../../store';
+import { useAuthUser } from '../../hooks/useAuthUser';
 
 // Simple function to generate consistent avatar color based on title
 const getAvatarColor = (title: string) => {
@@ -23,6 +24,9 @@ export default function Gallery() {
   const { data: datasets, isLoading, error } = useFetchDatasetsQuery(undefined);
   const [deleteDataset] = useDeleteDatasetMutation();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const { user } = useAuthUser();
+  const navigate = useNavigate();
+  const isResearcher = user?.role === 'researcher' || user?.role === 'admin';
 
   const handleDelete = async (e: React.MouseEvent, datasetId: string, datasetTitle: string) => {
     e.preventDefault(); // Prevent navigation
@@ -66,9 +70,11 @@ export default function Gallery() {
       <div className="text-center p-5">
         <h3 className="text-muted">No datasets yet</h3>
         <p className="text-muted">Upload your first dataset to get started</p>
-        <Link to="/upload_dataset" className="btn btn-primary">
-          Upload Dataset
-        </Link>
+        {isResearcher && (
+          <Link to="/upload_dataset" className="btn btn-primary">
+            Upload Dataset
+          </Link>
+        )}
       </div>
     );
   }
@@ -77,10 +83,12 @@ export default function Gallery() {
     <div>
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2>Datasets</h2>
-        <Link to="/upload_dataset" className="btn btn-primary">
-          <i className="bi bi-plus-circle me-2"></i>
-          New Dataset
-        </Link>
+        {isResearcher && (
+          <Link to="/upload_dataset" className="btn btn-primary">
+            <i className="bi bi-plus-circle me-2"></i>
+            New Dataset
+          </Link>
+        )}
       </div>
 
       <div className="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
@@ -91,24 +99,32 @@ export default function Gallery() {
           return (
             <div key={dataset._id} className="col">
               <div className="card h-100 shadow-sm border position-relative">
-                {/* Delete button */}
-                <button
-                  className="btn btn-sm btn-danger position-absolute top-0 end-0 m-2"
-                  style={{ zIndex: 10 }}
-                  onClick={(e) => handleDelete(e, dataset._id, dataset.title)}
-                  disabled={deletingId === dataset._id}
-                  title="Delete dataset"
-                >
-                  {deletingId === dataset._id ? (
-                    <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                  ) : (
-                    <i className="bi bi-trash"></i>
-                  )}
-                </button>
+                {isResearcher && (
+                  <button
+                    className="btn btn-sm btn-danger position-absolute top-0 end-0 m-2"
+                    style={{ zIndex: 10 }}
+                    onClick={(e) => handleDelete(e, dataset._id, dataset.title)}
+                    disabled={deletingId === dataset._id}
+                    title="Delete dataset"
+                  >
+                    {deletingId === dataset._id ? (
+                      <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    ) : (
+                      <i className="bi bi-trash"></i>
+                    )}
+                  </button>
+                )}
 
-                <Link 
-                  to={`/dataset/${dataset._id}`} 
-                  className="text-decoration-none h-100 d-block"
+                <button
+                  type="button"
+                  className="text-decoration-none h-100 d-block btn w-100 text-start p-0 border-0 bg-transparent"
+                  onClick={() => {
+                    if (user?.role === 'annotator') {
+                      navigate(`/annotator?dataset=${dataset._id}`);
+                    } else {
+                      navigate(`/dataset/${dataset._id}`);
+                    }
+                  }}
                 >
                   <div className="card-body">
                     <div className="d-flex align-items-start mb-3">
@@ -144,7 +160,7 @@ export default function Gallery() {
                       </div>
                     </div>
                   </div>
-                </Link>
+                </button>
               </div>
             </div>
           );

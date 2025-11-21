@@ -1,5 +1,6 @@
 const express = require('express');
 const mongoose = require('mongoose');
+const { requireAuth, requireRoles } = require('../middleware/auth');
 
 const Rubric = mongoose.model('Rubric');
 const Dataset = mongoose.model('Dataset');
@@ -10,7 +11,7 @@ const router = express.Router();
  * GET /api/rubric/by-dataset/:datasetId
  * Return all rubrics for a dataset
  */
-router.get('/by-dataset/:datasetId', async (req, res) => {
+router.get('/by-dataset/:datasetId', requireAuth, async (req, res) => {
   try {
     const { datasetId } = req.params;
     const rubrics = await Rubric.find({ dataset: datasetId }).sort({ _dateCreated: 1 });
@@ -24,7 +25,7 @@ router.get('/by-dataset/:datasetId', async (req, res) => {
  * GET /api/rubric/:rubricId
  * Return a specific rubric by ID
  */
-router.get('/:rubricId', async (req, res) => {
+router.get('/:rubricId', requireAuth, async (req, res) => {
   try {
     const { rubricId } = req.params;
     const rubric = await Rubric.findById(rubricId);
@@ -42,7 +43,7 @@ router.get('/:rubricId', async (req, res) => {
  * Body: { title, datasetId, displayColumns: string[], fields: [{name,label,type,required,options?,isDatasetColumn}] }
  * Create a new rubric for the dataset
  */
-router.post('/create', async (req, res) => {
+router.post('/create', requireRoles('researcher'), async (req, res) => {
   try {
     const { title, datasetId, displayColumns, fields } = req.body;
 
@@ -98,7 +99,7 @@ router.post('/create', async (req, res) => {
  * PUT /api/rubric/:rubricId
  * Update an existing rubric
  */
-router.put('/:rubricId', async (req, res) => {
+router.put('/:rubricId', requireRoles('researcher'), async (req, res) => {
   try {
     const { rubricId } = req.params;
     const { title, displayColumns, fields } = req.body;
@@ -153,7 +154,7 @@ router.put('/:rubricId', async (req, res) => {
  * DELETE /api/rubric/:rubricId
  * Delete a rubric and its annotations
  */
-router.delete('/:rubricId', async (req, res) => {
+router.delete('/:rubricId', requireRoles('researcher'), async (req, res) => {
   try {
     const { rubricId } = req.params;
 
