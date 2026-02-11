@@ -57,11 +57,11 @@ app.use((err, req, res, next) => {
 
 if (process.env.NODE_ENV === 'production') {
     // Serve static files from the React app build directory
-    app.use(express.static(path.join(__dirname, 'client/dist')));
+    app.use(express.static(path.join(__dirname, '../client/dist')));
     
     // Use a more specific pattern instead of '*'
     app.get(/^(?!\/api).*/, (req, res) => {
-        res.sendFile(path.join(__dirname, 'client/dist', 'index.html'), (err) => {
+        res.sendFile(path.join(__dirname, '../client/dist', 'index.html'), (err) => {
             if (err) {
                 console.error('Error serving file:', err);
                 res.status(500).send('Error serving page');
