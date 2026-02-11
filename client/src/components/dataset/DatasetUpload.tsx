@@ -68,19 +68,22 @@ export default function DatasetUpload() {
                     value={formData.title}
                     onChange={e => setFormData(f => ({ ...f, title: e.target.value }))}
                     required
+                    className='form-control border border-solid'
                 />
                 <textarea
                     placeholder="Description"
                     value={formData.description}
                     onChange={e => setFormData(f => ({ ...f, description: e.target.value }))}
+                    className='form-control border border-solid'
                 />
                 <input
                     type="file"
                     accept=".csv,.json"
                     onChange={handleFile}
                     required
+                    className='form-control border border-solid'
                 />
-                <button type="submit" disabled={isLoading}>
+                <button type="submit" disabled={isLoading} className='btn btn-success'>
                     {isLoading ? 'Uploading…' : 'Upload'}
                 </button>
             </form>

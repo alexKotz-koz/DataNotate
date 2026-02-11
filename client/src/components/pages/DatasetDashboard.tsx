@@ -184,7 +184,7 @@ export default function DatasetDashboard() {
                   <table className="table table-hover">
                     <thead>
                       <tr>
-                        {dataset.columns?.slice(0, 5).map(col => (
+                        {dataset.columns?.slice(0, 3).map(col => (
                           <th key={col}>{col}</th>
                         ))}
                         {dataset.columns && dataset.columns.length > 5 && <th>...</th>}
@@ -193,7 +193,7 @@ export default function DatasetDashboard() {
                     <tbody>
                       {rows.slice(0, 5).map((row) => (
                         <tr key={row._id}>
-                          {dataset.columns?.slice(0, 5).map(col => (
+                          {dataset.columns?.slice(0, 3).map(col => (
                             <td key={col} className="text-truncate" style={{ maxWidth: 200 }}>
                               {String(row.data[col] || '—')}
                             </td>
