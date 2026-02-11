@@ -252,6 +252,11 @@ const formatAnnotationExport = (annotation) => {
     ? annotation.rubric.fields.map(f => f.name).filter(Boolean)
     : [];
 
+  const annotator = annotation?._annotator || null;
+  const annotatorDisplayName = annotator
+    ? [annotator.firstName, annotator.lastName].filter(Boolean).join(' ') || annotator.username || annotator.email
+    : null;
+
   const projectDisplayColumns = (row) => {
     const data = row.datasetRow?.data || {};
     return displayColumns.reduce((acc, column) => {
@@ -274,20 +279,28 @@ const formatAnnotationExport = (annotation) => {
 
   return {
     metadata: {
-      datasetId: annotation.dataset?._id,
-      rubricId: annotation.rubric?._id,
-      annotationId: annotation._id,
       datasetTitle: annotation.dataset?.title,
       datasetDescription: annotation.dataset?.description,
       rubricTitle: annotation.rubric?.title,
-      annotator: annotation._annotator,
+      annotationSessionLabel: annotation.sessionLabel || null,
+      annotationSessionNumber: annotation.sessionNumber || null,
+      annotator: annotator
+        ? {
+            displayName: annotatorDisplayName || null,
+            username: annotator.username || null,
+            email: annotator.email || null,
+            firstName: annotator.firstName || null,
+            lastName: annotator.lastName || null,
+            role: annotator.role || null
+          }
+        : null,
       rowCount: annotation.rows?.length || 0,
       completed: annotation.completed,
       dateCreated: annotation._dateCreated,
       dateUpdated: annotation._dateUpdated
     },
-    annotations: (annotation.rows || []).map((row) => ({
-      datasetRowId: row.datasetRow?._id,
+    annotations: (annotation.rows || []).map((row, index) => ({
+      rowNumber: index + 1,
       display: projectDisplayColumns(row),
       rubric: projectRubricFields(row),
       dateAnnotated: row._dateAnnotated
@@ -306,6 +319,7 @@ router.get('/download/:annotationId', requireRoles('researcher'), async (req, re
     const annotation = await Annotation.findById(annotationId)
       .populate('dataset')
       .populate('rubric')
+      .populate('_annotator', 'username email firstName lastName role')
       .populate({ path: 'rows.datasetRow', select: 'data' });
 
     if (!annotation) {
@@ -341,6 +355,7 @@ router.get('/download-bulk/:datasetId', requireRoles('researcher'), async (req, 
     const annotations = await Annotation.find(query)
       .populate('dataset')
       .populate('rubric')
+      .populate('_annotator', 'username email firstName lastName role')
       .populate({ path: 'rows.datasetRow', select: 'data' });
 
     if (annotations.length === 0) {

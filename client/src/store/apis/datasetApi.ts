@@ -23,6 +23,7 @@ export interface RubricField {
   label: string;
   type: 'string' | 'number' | 'boolean' | 'select';
   required?: boolean;
+  instructions?: string;
   options?: string[];
   isDatasetColumn?: boolean;
 }

@@ -41,7 +41,7 @@ export default function Login() {
               {error && <div className="alert alert-danger">{error}</div>}
               <form onSubmit={handleSubmit}>
                 <div className="mb-3">
-                  <label className="form-label">Username</label>
+                  <label className="form-label">Username or Email</label>
                   <input
                     className="form-control"
                     value={form.username}

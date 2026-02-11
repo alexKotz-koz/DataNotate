@@ -58,7 +58,10 @@ function RubricManagement() {
   };
 
   const handleAddField = () => {
-    setFields([...fields, { name: '', label: '', type: 'string', required: false, isDatasetColumn: false }]);
+    setFields([
+      ...fields,
+      { name: '', label: '', type: 'string', required: false, instructions: '', isDatasetColumn: false }
+    ]);
   };
 
   const handleRemoveField = (index: number) => {
@@ -89,7 +92,8 @@ function RubricManagement() {
         name: column, 
         label: column, 
         type: 'string', 
-        required: false, 
+        required: false,
+        instructions: '',
         isDatasetColumn: true 
       }]);
     }
@@ -249,11 +253,13 @@ function RubricManagement() {
                           <th>Column Name</th>
                           <th className="text-center">Display</th>
                           <th className="text-center">Rubric</th>
+                          <th>Instructions</th>
                         </tr>
                       </thead>
                       <tbody>
                         {dataset.columns.map(column => {
-                          const isInRubric = fields.find(f => f.name === column && f.isDatasetColumn);
+                          const rubricIndex = fields.findIndex(f => f.name === column && f.isDatasetColumn);
+                          const isInRubric = rubricIndex >= 0;
                           return (
                             <tr key={column}>
                               <td>{column}</td>
@@ -269,8 +275,18 @@ function RubricManagement() {
                                 <input
                                   className="form-check-input"
                                   type="checkbox"
-                                  checked={!!isInRubric}
+                                  checked={isInRubric}
                                   onChange={() => handleToggleRubricColumn(column)}
+                                />
+                              </td>
+                              <td>
+                                <input
+                                  type="text"
+                                  className="form-control form-control-sm"
+                                  placeholder="Optional field instructions"
+                                  value={isInRubric ? fields[rubricIndex]?.instructions || '' : ''}
+                                  onChange={(e) => handleFieldChange(rubricIndex, 'instructions', e.target.value)}
+                                  disabled={!isInRubric}
                                 />
                               </td>
                             </tr>
@@ -312,6 +328,15 @@ function RubricManagement() {
                               placeholder="Label (e.g., Quality Score)"
                               value={field.label}
                               onChange={(e) => handleFieldChange(index, 'label', e.target.value)}
+                            />
+                          </div>
+                          <div className="col-12">
+                            <input
+                              type="text"
+                              className="form-control form-control-sm"
+                              placeholder="Instructions (e.g., Only use 'vague' or 'clear')"
+                              value={field.instructions || ''}
+                              onChange={(e) => handleFieldChange(index, 'instructions', e.target.value)}
                             />
                           </div>
                           <div className="col-md-4">

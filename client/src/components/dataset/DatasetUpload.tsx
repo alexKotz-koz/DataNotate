@@ -7,6 +7,7 @@ interface UploadFormData {
     description: string;
     uploadType: 'csv' | 'json';
     file: File | null;
+    shuffleRows: boolean;
 }
 
 export default function DatasetUpload() {
@@ -15,7 +16,8 @@ export default function DatasetUpload() {
         title: '',
         description: '',
         uploadType: 'csv',
-        file: null
+        file: null,
+        shuffleRows: false
     });
 
     const [uploadDataset, { isLoading }] = useUploadDatasetMutation();
@@ -49,9 +51,10 @@ export default function DatasetUpload() {
         fd.append('title', formData.title);
         fd.append('description', formData.description);
         fd.append('uploadType', formData.uploadType);
+        fd.append('shuffleRows', formData.shuffleRows ? 'true' : 'false');
         try {
             await uploadDataset(fd).unwrap();
-            setFormData({ title: '', description: '', uploadType: 'csv', file: null });
+            setFormData({ title: '', description: '', uploadType: 'csv', file: null, shuffleRows: false });
             navigate('/');
 
         } catch (err) {
@@ -83,6 +86,18 @@ export default function DatasetUpload() {
                     required
                     className='form-control border border-solid'
                 />
+                <div className="form-check">
+                    <input
+                        className="form-check-input"
+                        type="checkbox"
+                        id="shuffleRows"
+                        checked={formData.shuffleRows}
+                        onChange={e => setFormData(f => ({ ...f, shuffleRows: e.target.checked }))}
+                    />
+                    <label className="form-check-label" htmlFor="shuffleRows">
+                        Shuffle dataset rows on upload
+                    </label>
+                </div>
                 <button type="submit" disabled={isLoading} className='btn btn-success'>
                     {isLoading ? 'Uploading…' : 'Upload'}
                 </button>

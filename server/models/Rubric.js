@@ -10,6 +10,7 @@ const RubricFieldSchema = new Schema({
         default: 'string'
     },
     required: { type: Boolean, default: false },
+    instructions: { type: String, trim: true },
     options: [{ type: String }], // for 'select' type
     isDatasetColumn: { type: Boolean, default: false } // true if from dataset, false if annotation-only
 }, { _id: false });

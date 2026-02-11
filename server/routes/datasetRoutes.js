@@ -64,7 +64,7 @@ router.get('/:id/rows', requireAuth, async (req, res) => {
 router.post('/upload', requireRoles('researcher'), upload.single('file'), async (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'File missing' });
 
-    const { title, description, uploadType } = req.body;
+    const { title, description, uploadType, shuffleRows } = req.body;
     const filePath = req.file.path;
 
     try {
@@ -92,6 +92,14 @@ router.post('/upload', requireRoles('researcher'), upload.single('file'), async 
         } else {
             fs.unlinkSync(filePath);
             return res.status(400).json({ error: 'Invalid uploadType' });
+        }
+
+        const shouldShuffle = String(shuffleRows || '').toLowerCase() === 'true';
+        if (shouldShuffle && rawRows.length > 1) {
+            for (let i = rawRows.length - 1; i > 0; i -= 1) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [rawRows[i], rawRows[j]] = [rawRows[j], rawRows[i]];
+            }
         }
 
         const dataset = await Dataset.create({

@@ -220,6 +220,11 @@ export default function Annotate() {
                     {field.label}
                     {field.required && <span className="text-danger">*</span>}
                   </label>
+                  {field.instructions && (
+                    <div className="text-muted small mb-2">
+                      {field.instructions}
+                    </div>
+                  )}
 
                   {field.type === 'string' && (
                     <textarea

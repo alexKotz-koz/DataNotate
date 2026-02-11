@@ -18,13 +18,18 @@ passport.deserializeUser((id, done) => {
 // Local Strategy
 passport.use(
   new LocalStrategy(
-    { usernameField: 'username' }, 
+    { usernameField: 'username' },
     async (username, password, done) => {
       try {
-        const user = await User.findOne({ username });
+        const identifier = String(username || '').trim();
+        const identifierLower = identifier.toLowerCase();
+
+        const user = await User.findOne({
+          $or: [{ username: identifier }, { email: identifierLower }]
+        });
 
         if (!user) {
-          return done(null, false, { error: 'Incorrect username' });
+          return done(null, false, { error: 'Incorrect username or email' });
         }
 
         const passwordsMatch = await bcrypt.compare(password, user.password);
