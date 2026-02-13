@@ -25,11 +25,79 @@ export default function Annotate() {
 
   const dataset = datasets?.find(d => d._id === datasetId);
 
+  // Sort rows based on rubric's rowDisplayOrder setting
+  const sortedRows = useMemo(() => {
+    if (!rows || !rubric) return rows;
+
+    let rowsCopy = [...rows];
+    const orderSetting = rubric.rowDisplayOrder || 'default';
+
+    if (orderSetting === 'default') {
+      return rowsCopy;
+    } else if (orderSetting === 'shuffle') {
+      // Shuffle once - consistent across all sessions using rubric ID as seed
+      const seed = rubric._id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+      const seededRandom = (index: number) => {
+        const x = Math.sin(seed + index) * 10000;
+        return x - Math.floor(x);
+      };
+      return rowsCopy.map((row, i) => ({ row, sort: seededRandom(i) }))
+        .sort((a, b) => a.sort - b.sort)
+        .map(({ row }) => row);
+    } else if (orderSetting === 'random') {
+      // Random order per session - use session ID as seed if available
+      const sessionSeed = annotationSessionId 
+        ? annotationSessionId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+        : Date.now();
+      const seededRandom = (index: number) => {
+        const x = Math.sin(sessionSeed + index) * 10000;
+        return x - Math.floor(x);
+      };
+      return rowsCopy.map((row, i) => ({ row, sort: seededRandom(i) }))
+        .sort((a, b) => a.sort - b.sort)
+        .map(({ row }) => row);
+    } else if (orderSetting === 'custom') {
+      // Custom manual order: sort based on customRowOrder array
+      const { customOrderColumn, customRowOrder } = rubric;
+
+      if (customOrderColumn && customRowOrder && customRowOrder.length > 0) {
+        // Create a map of value -> order index for efficient lookup
+        const orderMap = new Map(
+          customRowOrder.map((value, index) => [String(value), index])
+        );
+
+        // Sort rows based on the order defined in customRowOrder
+        return rowsCopy.sort((a, b) => {
+          const aValue = String(a.data[customOrderColumn]);
+          const bValue = String(b.data[customOrderColumn]);
+          
+          const aOrder = orderMap.get(aValue);
+          const bOrder = orderMap.get(bValue);
+          
+          // If both have order positions, sort by those positions
+          if (aOrder !== undefined && bOrder !== undefined) {
+            return aOrder - bOrder;
+          }
+          
+          // Items not in the custom order go to the end
+          if (aOrder !== undefined) return -1;
+          if (bOrder !== undefined) return 1;
+          
+          return 0;
+        });
+      }
+
+      return rowsCopy;
+    }
+
+    return rowsCopy;
+  }, [rows, rubric, annotationSessionId]);
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [formData, setFormData] = useState<Record<string, any>>({});
 
-  // Get current row
-  const currentRow = rows?.[currentIndex];
+  // Get current row from sorted rows
+  const currentRow = sortedRows?.[currentIndex];
 
   // Aggregate annotation record and row entry
   const aggregate = useMemo(() => {
@@ -81,7 +149,7 @@ export default function Annotate() {
     );
   }
 
-  const progress = ((currentIndex + 1) / rows.length) * 100;
+  const progress = ((currentIndex + 1) / sortedRows.length) * 100;
   const annotatedCount = aggregate?.rows.length || 0;
 
   const handlePrevious = () => {
@@ -91,7 +159,7 @@ export default function Annotate() {
   };
 
   const handleNext = () => {
-    if (currentIndex < rows.length - 1) {
+    if (currentIndex < sortedRows.length - 1) {
       setCurrentIndex(currentIndex + 1);
     }
   };
@@ -123,7 +191,7 @@ export default function Annotate() {
   const handleSave = async () => {
     try {
       await saveCurrentRow();
-      if (currentIndex < rows.length - 1) {
+      if (currentIndex < sortedRows.length - 1) {
         setCurrentIndex(currentIndex + 1);
       }
     } catch (err) {
@@ -143,7 +211,7 @@ export default function Annotate() {
   };
 
   // Check if we're on the last row
-  const isLastRow = currentIndex === rows.length - 1;
+  const isLastRow = currentIndex === sortedRows.length - 1;
 
   const handleFieldChange = (fieldName: string, value: any) => {
     setFormData(prev => ({ ...prev, [fieldName]: value }));
@@ -159,7 +227,7 @@ export default function Annotate() {
           </button>
           <h2 className="mb-1">Annotate: {dataset.title}</h2>
           <p className="text-muted mb-0">
-            <strong>Rubric:</strong> {rubric.title} • Row {currentIndex + 1} of {rows.length} • {annotatedCount} annotated
+            <strong>Rubric:</strong> {rubric.title} • Row {currentIndex + 1} of {sortedRows.length} • {annotatedCount} annotated
           </p>
         </div>
       </div>

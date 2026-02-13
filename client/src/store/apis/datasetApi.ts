@@ -34,6 +34,9 @@ export interface Rubric {
   dataset: string;
   displayColumns: string[];
   fields: RubricField[];
+  rowDisplayOrder?: 'default' | 'random' | 'shuffle' | 'custom';
+  customOrderColumn?: string;
+  customRowOrder?: any[];
   _createdBy?: string | null;
   _dateCreated?: string;
   _dateUpdated?: string;
@@ -124,14 +127,14 @@ export const datasetApi = createApi({
     }),
     createRubric: builder.mutation<
       { success: boolean; rubric: Rubric }, 
-      { title: string; datasetId: string; displayColumns: string[]; fields: RubricField[] }
+      { title: string; datasetId: string; displayColumns: string[]; fields: RubricField[]; rowDisplayOrder?: 'default' | 'random' | 'shuffle' | 'custom'; customOrderColumn?: string; customRowOrder?: any[] }
     >({
       invalidatesTags: (_result, _error, arg) => [{ type: 'Rubric', id: arg.datasetId }],
       query: (body) => ({ url: '/rubric/create', method: 'POST', body }),
     }),
     updateRubric: builder.mutation<
       { success: boolean; rubric: Rubric }, 
-      { rubricId: string; title?: string; displayColumns?: string[]; fields?: RubricField[] }
+      { rubricId: string; title?: string; displayColumns?: string[]; fields?: RubricField[]; rowDisplayOrder?: 'default' | 'random' | 'shuffle' | 'custom'; customOrderColumn?: string; customRowOrder?: any[] }
     >({
       invalidatesTags: (_result, _error, arg) => [{ type: 'Rubric', id: arg.rubricId }],
       query: ({ rubricId, ...body }) => ({ url: `/rubric/${rubricId}`, method: 'PUT', body }),

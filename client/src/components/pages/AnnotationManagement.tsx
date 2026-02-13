@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
-import { useFetchDatasetsQuery, useGetRubricsByDatasetQuery, useFetchAnnotationsByDatasetQuery } from '../../store';
+import { useFetchDatasetsQuery, useGetRubricsByDatasetQuery, useFetchAnnotationsByDatasetQuery, useDeleteAnnotationMutation } from '../../store';
 
 export default function AnnotationManagement() {
   const { data: datasets } = useFetchDatasetsQuery(undefined);
   const [datasetId, setDatasetId] = useState<string>('');
   const [rubricId, setRubricId] = useState<string>('');
+  const [deleteAnnotation, { isLoading: isDeleting }] = useDeleteAnnotationMutation();
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   useEffect(() => {
     if (!datasetId && datasets && datasets.length > 0) {
@@ -29,6 +31,17 @@ export default function AnnotationManagement() {
 
   const handleDownload = async (annotationId: string) => {
     window.open(`/api/annotation/download/${annotationId}`, '_blank');
+  };
+
+  const handleDelete = async (annotationId: string) => {
+    try {
+      await deleteAnnotation(annotationId).unwrap();
+      setDeleteConfirm(null);
+      // Refetch handled automatically by RTK Query invalidation
+    } catch (error) {
+      console.error('Error deleting annotation:', error);
+      alert('Failed to delete annotation session. Please try again.');
+    }
   };
 
   if (!datasets || datasets.length === 0) {
@@ -126,10 +139,25 @@ export default function AnnotationManagement() {
                         </td>
                         <td>{annotation._dateUpdated ? new Date(annotation._dateUpdated).toLocaleString() : '—'}</td>
                         <td>
-                          <button className="btn btn-sm btn-outline-primary" onClick={() => handleDownload(annotation._id)}>
-                            <i className="bi bi-download me-1"></i>
-                            Download
-                          </button>
+                          <div className="d-flex gap-2">
+                            <button 
+                              className="btn btn-sm btn-outline-primary" 
+                              onClick={() => handleDownload(annotation._id)}
+                              title="Download annotation data"
+                            >
+                              <i className="bi bi-download me-1"></i>
+                              Download
+                            </button>
+                            <button 
+                              className="btn btn-sm btn-outline-danger" 
+                              onClick={() => setDeleteConfirm(annotation._id)}
+                              disabled={isDeleting}
+                              title="Delete annotation session"
+                            >
+                              <i className="bi bi-trash me-1"></i>
+                              Delete
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -140,6 +168,47 @@ export default function AnnotationManagement() {
           )}
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <div className="modal d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={() => setDeleteConfirm(null)}>
+          <div className="modal-dialog modal-dialog-centered" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Confirm Delete</h5>
+                <button type="button" className="btn-close" onClick={() => setDeleteConfirm(null)}></button>
+              </div>
+              <div className="modal-body">
+                <p className="mb-1">Are you sure you want to delete this annotation session?</p>
+                <p className="text-muted mb-0 small">This action cannot be undone.</p>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={() => setDeleteConfirm(null)} disabled={isDeleting}>
+                  Cancel
+                </button>
+                <button 
+                  type="button" 
+                  className="btn btn-danger" 
+                  onClick={() => handleDelete(deleteConfirm)}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <i className="bi bi-trash me-1"></i>
+                      Delete Session
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

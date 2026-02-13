@@ -45,7 +45,7 @@ router.get('/:rubricId', requireAuth, async (req, res) => {
  */
 router.post('/create', requireRoles('researcher'), async (req, res) => {
   try {
-    const { title, datasetId, displayColumns, fields } = req.body;
+    const { title, datasetId, displayColumns, fields, rowDisplayOrder, customOrderColumn, customRowOrder } = req.body;
 
     if (!title) return res.status(400).json({ error: 'title required' });
     if (!datasetId) return res.status(400).json({ error: 'datasetId required' });
@@ -80,13 +80,34 @@ router.post('/create', requireRoles('researcher'), async (req, res) => {
       });
     }
 
-    const rubric = await Rubric.create({
+    const rubricData = {
       title,
       dataset: datasetId,
       displayColumns,
       fields,
       _createdBy: req.user?._id || null
-    });
+    };
+
+    // Add rowDisplayOrder if provided
+    if (rowDisplayOrder && ['default', 'random', 'shuffle', 'custom'].includes(rowDisplayOrder)) {
+      rubricData.rowDisplayOrder = rowDisplayOrder;
+    }
+
+    // Add custom order settings if rowDisplayOrder is 'custom'
+    if (rowDisplayOrder === 'custom') {
+      if (customOrderColumn) {
+        // Validate that customOrderColumn exists in dataset
+        if (!dataset.columns.includes(customOrderColumn)) {
+          return res.status(400).json({ error: 'customOrderColumn not in dataset columns' });
+        }
+        rubricData.customOrderColumn = customOrderColumn;
+      }
+      if (customRowOrder && Array.isArray(customRowOrder)) {
+        rubricData.customRowOrder = customRowOrder;
+      }
+    }
+
+    const rubric = await Rubric.create(rubricData);
 
     res.json({ success: true, rubric });
   } catch (e) {
@@ -102,7 +123,7 @@ router.post('/create', requireRoles('researcher'), async (req, res) => {
 router.put('/:rubricId', requireRoles('researcher'), async (req, res) => {
   try {
     const { rubricId } = req.params;
-    const { title, displayColumns, fields } = req.body;
+    const { title, displayColumns, fields, rowDisplayOrder, customOrderColumn, customRowOrder } = req.body;
 
     const rubric = await Rubric.findById(rubricId);
     if (!rubric) {
@@ -140,6 +161,26 @@ router.put('/:rubricId', requireRoles('researcher'), async (req, res) => {
     if (title) rubric.title = title;
     if (displayColumns) rubric.displayColumns = displayColumns;
     if (fields) rubric.fields = fields;
+    if (rowDisplayOrder && ['default', 'random', 'shuffle', 'custom'].includes(rowDisplayOrder)) {
+      rubric.rowDisplayOrder = rowDisplayOrder;
+    }
+
+    // Handle custom order settings
+    if (rowDisplayOrder === 'custom') {
+      if (customOrderColumn !== undefined) {
+        if (customOrderColumn && !dataset.columns.includes(customOrderColumn)) {
+          return res.status(400).json({ error: 'customOrderColumn not in dataset columns' });
+        }
+        rubric.customOrderColumn = customOrderColumn;
+      }
+      if (customRowOrder !== undefined && Array.isArray(customRowOrder)) {
+        rubric.customRowOrder = customRowOrder;
+      }
+    } else if (rowDisplayOrder && rowDisplayOrder !== 'custom') {
+      // Clear custom settings if switching away from custom mode
+      rubric.customOrderColumn = undefined;
+      rubric.customRowOrder = undefined;
+    }
 
     await rubric.save();
 

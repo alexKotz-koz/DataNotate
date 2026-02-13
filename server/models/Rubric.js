@@ -20,6 +20,13 @@ const RubricSchema = new Schema({
     dataset: { type: Schema.Types.ObjectId, ref: 'Dataset', required: true, index: true },
     displayColumns: [{ type: String, required: true }], // Dataset columns to show to annotator
     fields: [RubricFieldSchema], // Fields to annotate (can be from dataset or custom)
+    rowDisplayOrder: { 
+        type: String, 
+        enum: ['default', 'random', 'shuffle', 'custom'], 
+        default: 'default' 
+    }, // How to order rows during annotation
+    customOrderColumn: { type: String }, // Column to use for custom manual ordering
+    customRowOrder: [{ type: Schema.Types.Mixed }], // Manual order of rows (array of column values)
     _createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
     _dateCreated: { type: Date, default: Date.now },
     _dateUpdated: { type: Date, default: Date.now }

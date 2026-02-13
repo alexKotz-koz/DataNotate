@@ -6,6 +6,7 @@ import {
   useCreateRubricMutation,
   useUpdateRubricMutation,
   useDeleteRubricMutation,
+  useFetchDatasetRowsQuery,
   type RubricField 
 } from '../../store';
 
@@ -14,6 +15,7 @@ function RubricManagement() {
   const navigate = useNavigate();
   const { data: datasets } = useFetchDatasetsQuery(undefined);
   const { data: rubrics, isLoading: rubricsLoading } = useGetRubricsByDatasetQuery(datasetId || '', { skip: !datasetId });
+  const { data: datasetRows } = useFetchDatasetRowsQuery(datasetId || '', { skip: !datasetId });
   const [createRubric, { isLoading: isCreating }] = useCreateRubricMutation();
   const [updateRubric, { isLoading: isUpdating }] = useUpdateRubricMutation();
   const [deleteRubric] = useDeleteRubricMutation();
@@ -23,6 +25,10 @@ function RubricManagement() {
   const [rubricTitle, setRubricTitle] = useState('');
   const [selectedDisplayColumns, setSelectedDisplayColumns] = useState<string[]>([]);
   const [fields, setFields] = useState<RubricField[]>([]);
+  const [rowDisplayOrder, setRowDisplayOrder] = useState<'default' | 'random' | 'shuffle' | 'custom'>('default');
+  const [customOrderColumn, setCustomOrderColumn] = useState<string>('');
+  const [customRowOrder, setCustomRowOrder] = useState<any[]>([]);
+  const [rangeFilterText, setRangeFilterText] = useState<string>('');
 
   const dataset = datasets?.find(d => d._id === datasetId);
 
@@ -33,6 +39,9 @@ function RubricManagement() {
         setRubricTitle(rubric.title);
         setSelectedDisplayColumns(rubric.displayColumns);
         setFields(rubric.fields);
+        setRowDisplayOrder(rubric.rowDisplayOrder || 'default');
+        setCustomOrderColumn(rubric.customOrderColumn || '');
+        setCustomRowOrder(rubric.customRowOrder || []);
       }
     }
   }, [editingRubricId, rubrics]);
@@ -45,6 +54,10 @@ function RubricManagement() {
       setRubricTitle('');
       setSelectedDisplayColumns([]);
       setFields([]);
+      setRowDisplayOrder('default');
+      setCustomOrderColumn('');
+      setCustomRowOrder([]);
+      setRangeFilterText('');
     }
     setShowModal(true);
   };
@@ -55,6 +68,10 @@ function RubricManagement() {
     setRubricTitle('');
     setSelectedDisplayColumns([]);
     setFields([]);
+    setRowDisplayOrder('default');
+    setCustomOrderColumn('');
+    setCustomRowOrder([]);
+    setRangeFilterText('');
   };
 
   const handleAddField = () => {
@@ -99,6 +116,96 @@ function RubricManagement() {
     }
   };
 
+  const handleCustomOrderColumnChange = (column: string) => {
+    setCustomOrderColumn(column);
+    
+    if (column && datasetRows) {
+      // Extract unique values from the selected column and sort them naturally
+      const uniqueValues = Array.from(
+        new Set(datasetRows.map(row => row.data[column]))
+      ).filter(val => val !== null && val !== undefined);
+      
+      // Natural sort to handle patterns like 1_1, 1_2, ..., 1_10 correctly
+      const sorted = uniqueValues.sort((a, b) => {
+        return String(a).localeCompare(String(b), undefined, { 
+          numeric: true, 
+          sensitivity: 'base' 
+        });
+      });
+      
+      setCustomRowOrder(sorted);
+    } else {
+      setCustomRowOrder([]);
+    }
+  };
+
+  const handleReorderDragStart = (e: React.DragEvent, index: number) => {
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/html', index.toString());
+  };
+
+  const handleReorderDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    const dragIndex = parseInt(e.dataTransfer.getData('text/html'));
+    
+    if (dragIndex !== dropIndex) {
+      const newOrder = [...customRowOrder];
+      const [removed] = newOrder.splice(dragIndex, 1);
+      newOrder.splice(dropIndex, 0, removed);
+      setCustomRowOrder(newOrder);
+    }
+  };
+
+  const handleFilterByRange = (rangeText: string) => {
+    if (!customOrderColumn || !datasetRows) return;
+
+    // Parse range expressions like "1_1-1_5, 2_3-2_8, 3_1-3_10"
+    const ranges = rangeText.split(',').map(r => r.trim()).filter(r => r.length > 0);
+    
+    if (ranges.length === 0) {
+      // Reset to all values if empty
+      handleCustomOrderColumnChange(customOrderColumn);
+      return;
+    }
+
+    const allValues = Array.from(
+      new Set(datasetRows.map(row => row.data[customOrderColumn]))
+    ).filter(val => val !== null && val !== undefined);
+
+    const selectedValues: any[] = [];
+
+    ranges.forEach(range => {
+      if (range.includes('-')) {
+        // Range like "1_1-1_5"
+        const [start, end] = range.split('-').map(s => s.trim());
+        
+        // Find all values that fall within this range
+        const filtered = allValues.filter(val => {
+          const valStr = String(val);
+          return valStr.localeCompare(start, undefined, { numeric: true, sensitivity: 'base' }) >= 0 &&
+                 valStr.localeCompare(end, undefined, { numeric: true, sensitivity: 'base' }) <= 0;
+        });
+        
+        selectedValues.push(...filtered);
+      } else {
+        // Single value
+        if (allValues.includes(range)) {
+          selectedValues.push(range);
+        }
+      }
+    });
+
+    // Sort naturally and remove duplicates
+    const uniqueSorted = Array.from(new Set(selectedValues)).sort((a, b) => {
+      return String(a).localeCompare(String(b), undefined, { 
+        numeric: true, 
+        sensitivity: 'base' 
+      });
+    });
+
+    setCustomRowOrder(uniqueSorted);
+  };
+
   const handleSave = async () => {
     if (!datasetId || !rubricTitle.trim()) {
       alert('Please provide a rubric title');
@@ -122,6 +229,9 @@ function RubricManagement() {
           title: rubricTitle,
           displayColumns: selectedDisplayColumns,
           fields,
+          rowDisplayOrder,
+          customOrderColumn: rowDisplayOrder === 'custom' ? customOrderColumn : undefined,
+          customRowOrder: rowDisplayOrder === 'custom' ? customRowOrder : undefined,
         }).unwrap();
       } else {
         await createRubric({
@@ -129,6 +239,9 @@ function RubricManagement() {
           title: rubricTitle,
           displayColumns: selectedDisplayColumns,
           fields,
+          rowDisplayOrder,
+          customOrderColumn: rowDisplayOrder === 'custom' ? customOrderColumn : undefined,
+          customRowOrder: rowDisplayOrder === 'custom' ? customRowOrder : undefined,
         }).unwrap();
       }
       handleCloseModal();
@@ -295,6 +408,168 @@ function RubricManagement() {
                       </tbody>
                     </table>
                   </div>
+                </div>
+
+                <div className="mb-4">
+                  <label className="form-label">Row Display Order</label>
+                  <p className="text-muted small">
+                    Choose how dataset rows are displayed during annotation sessions
+                  </p>
+                  <div className="row g-2 mb-3">
+                    <div className="col-md-6">
+                      <input
+                        type="radio"
+                        className="btn-check"
+                        name="rowDisplayOrder"
+                        id="order-default"
+                        checked={rowDisplayOrder === 'default'}
+                        onChange={() => setRowDisplayOrder('default')}
+                      />
+                      <label className="btn btn-outline-primary w-100" htmlFor="order-default">
+                        <i className="bi bi-list-ol me-2"></i>
+                        Default Order
+                        <small className="d-block text-muted">Original upload order</small>
+                      </label>
+                    </div>
+
+                    <div className="col-md-6">
+                      <input
+                        type="radio"
+                        className="btn-check"
+                        name="rowDisplayOrder"
+                        id="order-random"
+                        checked={rowDisplayOrder === 'random'}
+                        onChange={() => setRowDisplayOrder('random')}
+                      />
+                      <label className="btn btn-outline-primary w-100" htmlFor="order-random">
+                        <i className="bi bi-shuffle me-2"></i>
+                        Random
+                        <small className="d-block text-muted">Different order per session</small>
+                      </label>
+                    </div>
+
+                    <div className="col-md-6">
+                      <input
+                        type="radio"
+                        className="btn-check"
+                        name="rowDisplayOrder"
+                        id="order-shuffle"
+                        checked={rowDisplayOrder === 'shuffle'}
+                        onChange={() => setRowDisplayOrder('shuffle')}
+                      />
+                      <label className="btn btn-outline-primary w-100" htmlFor="order-shuffle">
+                        <i className="bi bi-arrow-down-up me-2"></i>
+                        Shuffle Once
+                        <small className="d-block text-muted">Same shuffled order for all</small>
+                      </label>
+                    </div>
+
+                    <div className="col-md-6">
+                      <input
+                        type="radio"
+                        className="btn-check"
+                        name="rowDisplayOrder"
+                        id="order-custom"
+                        checked={rowDisplayOrder === 'custom'}
+                        onChange={() => setRowDisplayOrder('custom')}
+                      />
+                      <label className="btn btn-outline-primary w-100" htmlFor="order-custom">
+                        <i className="bi bi-sliders me-2"></i>
+                        Custom Order
+                        <small className="d-block text-muted">Sort & filter by column</small>
+                      </label>
+                    </div>
+                  </div>
+
+                  {rowDisplayOrder === 'custom' && (
+                    <div className="card bg-light">
+                      <div className="card-body">
+                        <h6 className="mb-3">Custom Order Settings</h6>
+                        <div className="mb-3">
+                          <label className="form-label">Order by Column</label>
+                          <select 
+                            className="form-select" 
+                            value={customOrderColumn}
+                            onChange={(e) => handleCustomOrderColumnChange(e.target.value)}
+                          >
+                            <option value="">Select column...</option>
+                            {dataset.columns.map(col => (
+                              <option key={col} value={col}>{col}</option>
+                            ))}
+                          </select>
+                          <small className="text-muted">Choose which column to use for custom ordering</small>
+                        </div>
+
+                        {customOrderColumn && customRowOrder.length > 0 && (
+                          <>
+                            <div className="mb-3">
+                              <label className="form-label">Filter by Range (Optional)</label>
+                              <input
+                                type="text"
+                                className="form-control font-monospace"
+                                placeholder="e.g., 1_1-1_5, 2_3-2_8, 3_1-3_10"
+                                value={rangeFilterText}
+                                onChange={(e) => setRangeFilterText(e.target.value)}
+                                onBlur={(e) => handleFilterByRange(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    handleFilterByRange((e.target as HTMLInputElement).value);
+                                  }
+                                }}
+                              />
+                              <small className="text-muted">
+                                Enter ranges to include (e.g., <code>1_1-1_5, 2_1-2_10</code>) or leave blank for all values. Press Enter to apply.
+                              </small>
+                            </div>
+
+                            <div>
+                              <div className="d-flex justify-content-between align-items-center mb-2">
+                                <label className="form-label mb-0">
+                                  Row Order Preview ({customRowOrder.length} items)
+                                </label>
+                                <button
+                                  type="button"
+                                  className="btn btn-sm btn-outline-secondary"
+                                  onClick={() => {
+                                    setRangeFilterText('');
+                                    handleCustomOrderColumnChange(customOrderColumn);
+                                  }}
+                                >
+                                  <i className="bi bi-arrow-clockwise me-1"></i>
+                                  Reset
+                                </button>
+                              </div>
+                              <small className="text-muted d-block mb-2">
+                                Rows are sorted naturally by default. Drag to reorder.
+                              </small>
+                              <div 
+                                className="border rounded bg-white" 
+                                style={{ maxHeight: '300px', overflowY: 'auto' }}
+                              >
+                                {customRowOrder.map((value, index) => (
+                                  <div
+                                    key={`${value}-${index}`}
+                                    draggable
+                                    onDragStart={(e) => handleReorderDragStart(e, index)}
+                                    onDragOver={(e) => e.preventDefault()}
+                                    onDrop={(e) => handleReorderDrop(e, index)}
+                                    className="d-flex align-items-center p-2 border-bottom"
+                                    style={{ cursor: 'move' }}
+                                  >
+                                    <span className="text-muted me-3" style={{ minWidth: '40px' }}>
+                                      {index + 1}.
+                                    </span>
+                                    <i className="bi bi-grip-vertical text-muted me-2"></i>
+                                    <code className="flex-grow-1">{String(value)}</code>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="mb-3">
