@@ -149,6 +149,19 @@ export default function Annotate() {
     );
   }
 
+  if (!sortedRows || sortedRows.length === 0) {
+    return (
+      <div className="container mt-4">
+        <div className="alert alert-info">
+          <h4>No data to annotate</h4>
+          <button onClick={() => navigate(-1)} className="btn btn-primary mt-2">
+            Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const progress = ((currentIndex + 1) / sortedRows.length) * 100;
   const annotatedCount = aggregate?.rows.length || 0;
 
