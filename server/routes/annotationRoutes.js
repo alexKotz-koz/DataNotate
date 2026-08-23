@@ -76,7 +76,7 @@ router.get('/by-row/:datasetRowId', requireAuth, async (req, res) => {
 // Save (append/update) a single row's annotation inside the aggregate annotation record
 router.post('/save', requireAuth, async (req, res) => {
   try {
-    const { datasetId, rubricId, datasetRowId, annotations, annotationId } = req.body;
+    const { datasetId, rubricId, datasetRowId, annotations, annotationId, preferenceChoice } = req.body;
     if (!datasetId || !rubricId || !datasetRowId || !annotations) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
@@ -85,6 +85,12 @@ router.post('/save', requireAuth, async (req, res) => {
     if (!row) return res.status(404).json({ error: 'Dataset row not found' });
     const rubric = await Rubric.findById(rubricId);
     if (!rubric) return res.status(404).json({ error: 'Rubric not found' });
+
+    if (preferenceChoice !== undefined && preferenceChoice !== null) {
+      if (rubric.taskType !== 'preferenceTest' || !rubric.preferenceColumns.includes(preferenceChoice)) {
+        return res.status(400).json({ error: 'Invalid preferenceChoice for this rubric' });
+      }
+    }
 
     const annotatorId = req.user?._id || null;
     const totalRows = await getDatasetRowCount(datasetId);
@@ -126,9 +132,10 @@ router.post('/save', requireAuth, async (req, res) => {
     const existingIndex = aggregate.rows.findIndex(r => r.datasetRow.toString() === datasetRowId);
     if (existingIndex >= 0) {
       aggregate.rows[existingIndex].values = annotations;
+      if (preferenceChoice !== undefined) aggregate.rows[existingIndex].preferenceChoice = preferenceChoice;
       aggregate.rows[existingIndex]._dateAnnotated = new Date();
     } else {
-      aggregate.rows.push({ datasetRow: datasetRowId, values: annotations });
+      aggregate.rows.push({ datasetRow: datasetRowId, values: annotations, preferenceChoice: preferenceChoice || undefined });
     }
 
     // Mark completed if threshold reached
@@ -248,9 +255,11 @@ const formatAnnotationExport = (annotation) => {
   const displayColumns = Array.isArray(annotation?.rubric?.displayColumns)
     ? annotation.rubric.displayColumns
     : [];
-  const rubricFieldNames = Array.isArray(annotation?.rubric?.fields)
-    ? annotation.rubric.fields.map(f => f.name).filter(Boolean)
-    : [];
+  const rubricFieldNames = [
+    ...(Array.isArray(annotation?.rubric?.fields) ? annotation.rubric.fields : []),
+    ...(Array.isArray(annotation?.rubric?.stage2Fields) ? annotation.rubric.stage2Fields : []),
+    ...(Array.isArray(annotation?.rubric?.secondaryFields) ? annotation.rubric.secondaryFields : [])
+  ].map(f => f.name).filter(Boolean);
 
   const annotator = annotation?._annotator || null;
   const annotatorDisplayName = annotator
@@ -303,6 +312,7 @@ const formatAnnotationExport = (annotation) => {
       rowNumber: index + 1,
       display: projectDisplayColumns(row),
       rubric: projectRubricFields(row),
+      preferenceChoice: row.preferenceChoice || null,
       dateAnnotated: row._dateAnnotated
     }))
   };

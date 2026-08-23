@@ -7,6 +7,9 @@ import {
   useSaveAnnotationMutation,
   useFetchAnnotationsByDatasetQuery,
 } from '../../store';
+import { useAuthUser } from '../../hooks/useAuthUser';
+import FieldInput from '../rubric/FieldInput';
+import PreferenceTaskPanel from './PreferenceTaskPanel';
 
 export default function Annotate() {
   const { datasetId, rubricId } = useParams<{ datasetId: string; rubricId: string }>();
@@ -22,6 +25,7 @@ export default function Annotate() {
     { skip: !datasetId || !rubricId }
   );
   const [saveAnnotation, { isLoading: isSaving }] = useSaveAnnotationMutation();
+  const { user } = useAuthUser();
 
   const dataset = datasets?.find(d => d._id === datasetId);
 
@@ -149,7 +153,7 @@ export default function Annotate() {
     );
   }
 
-  if (!sortedRows || sortedRows.length === 0) {
+  if (!sortedRows || sortedRows.length === 0 || !currentRow) {
     return (
       <div className="container mt-4">
         <div className="alert alert-info">
@@ -177,7 +181,7 @@ export default function Annotate() {
     }
   };
 
-  const saveCurrentRow = async () => {
+  const saveCurrentRow = async (preferenceChoiceOverride?: string) => {
     if (!currentRow || !rubricId || !datasetId) {
       throw new Error('Missing dataset, rubric, or row information.');
     }
@@ -188,6 +192,9 @@ export default function Annotate() {
       datasetRowId: currentRow._id,
       annotations: formData,
       annotationId: aggregate?._id || annotationSessionId,
+      ...(rubric?.taskType === 'preferenceTest'
+        ? { preferenceChoice: preferenceChoiceOverride ?? existingRowEntry?.preferenceChoice ?? undefined }
+        : {}),
     }).unwrap();
 
     if (!annotationSessionId) {
@@ -201,9 +208,9 @@ export default function Annotate() {
     return result;
   };
 
-  const handleSave = async () => {
+  const handleSave = async (preferenceChoiceOverride?: string) => {
     try {
-      await saveCurrentRow();
+      await saveCurrentRow(preferenceChoiceOverride);
       if (currentIndex < sortedRows.length - 1) {
         setCurrentIndex(currentIndex + 1);
       }
@@ -213,9 +220,9 @@ export default function Annotate() {
     }
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (preferenceChoiceOverride?: string) => {
     try {
-      await saveCurrentRow();
+      await saveCurrentRow(preferenceChoiceOverride);
       navigate('/annotator');
     } catch (err) {
       console.error('Failed to submit annotation:', err);
@@ -265,6 +272,26 @@ export default function Annotate() {
         </div>
       </div>
 
+      {rubric.taskType === 'preferenceTest' ? (
+        <PreferenceTaskPanel
+          key={currentRow._id}
+          rubric={rubric}
+          currentRow={currentRow}
+          formData={formData}
+          onFieldChange={handleFieldChange}
+          initialPreferenceChoice={existingRowEntry?.preferenceChoice || null}
+          onChoosePreference={async (column) => { await saveCurrentRow(column); }}
+          isSaving={isSaving}
+          isLastRow={isLastRow}
+          onSaveAndNext={() => handleSave()}
+          onSubmit={() => handleSubmit()}
+          onPrevious={handlePrevious}
+          onNext={handleNext}
+          canGoPrevious={currentIndex > 0}
+          canGoNext={currentIndex < sortedRows.length - 1}
+          seed={`${currentRow._id}:${user?._id || 'anon'}`}
+        />
+      ) : (
       <div className="row g-4">
         {/* Left Panel - Data Display */}
         <div className="col-lg-7">
@@ -296,70 +323,19 @@ export default function Annotate() {
             </div>
             <div className="card-body">
               {rubric.fields.map(field => (
-                <div key={field.name} className="mb-3">
-                  <label className="form-label">
-                    {field.label}
-                    {field.required && <span className="text-danger">*</span>}
-                  </label>
-                  {field.instructions && (
-                    <div className="text-muted small mb-2">
-                      {field.instructions}
-                    </div>
-                  )}
-
-                  {field.type === 'string' && (
-                    <textarea
-                      className="form-control"
-                      value={formData[field.name] || ''}
-                      onChange={(e) => handleFieldChange(field.name, e.target.value)}
-                      required={field.required}
-                      rows={3}
-                    />
-                  )}
-
-                  {field.type === 'number' && (
-                    <input
-                      type="number"
-                      className="form-control"
-                      value={formData[field.name] || ''}
-                      onChange={(e) => handleFieldChange(field.name, parseFloat(e.target.value))}
-                      required={field.required}
-                      step="any"
-                    />
-                  )}
-
-                  {field.type === 'boolean' && (
-                    <div className="form-check form-switch">
-                      <input
-                        className="form-check-input"
-                        type="checkbox"
-                        checked={!!formData[field.name]}
-                        onChange={(e) => handleFieldChange(field.name, e.target.checked)}
-                      />
-                    </div>
-                  )}
-
-                  {field.type === 'select' && field.options && (
-                    <select
-                      className="form-select"
-                      value={formData[field.name] || ''}
-                      onChange={(e) => handleFieldChange(field.name, e.target.value)}
-                      required={field.required}
-                    >
-                      <option value="">Select...</option>
-                      {field.options.map(opt => (
-                        <option key={opt} value={opt}>{opt}</option>
-                      ))}
-                    </select>
-                  )}
-                </div>
+                <FieldInput
+                  key={field.name}
+                  field={field}
+                  value={formData[field.name]}
+                  onChange={(v) => handleFieldChange(field.name, v)}
+                />
               ))}
 
               {/* Action Buttons */}
               {isLastRow ? (
                 <button
                   className="btn btn-success w-100 mt-4"
-                  onClick={handleSubmit}
+                  onClick={() => handleSubmit()}
                   disabled={isSaving}
                 >
                   {isSaving ? (
@@ -388,7 +364,7 @@ export default function Annotate() {
 
                     <button
                       className="btn btn-primary flex-grow-1"
-                      onClick={handleSave}
+                      onClick={() => handleSave()}
                       disabled={isSaving}
                     >
                       {isSaving ? (
@@ -452,6 +428,7 @@ export default function Annotate() {
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 }

@@ -6,6 +6,7 @@ const { Schema } = mongoose;
 const RowAnnotationSubSchema = new Schema({
   datasetRow: { type: Schema.Types.ObjectId, ref: 'DatasetRow', required: true },
   values: { type: Schema.Types.Mixed, required: true }, // rubric field values for this row
+  preferenceChoice: { type: String }, // preferenceTest: dataset column name the annotator chose
   _dateAnnotated: { type: Date, default: Date.now }
 }, { _id: false });
 

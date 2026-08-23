@@ -32,11 +32,18 @@ export interface Rubric {
   _id: string;
   title: string;
   dataset: string;
+  taskType?: 'standard' | 'preferenceTest';
   displayColumns: string[];
   fields: RubricField[];
   rowDisplayOrder?: 'default' | 'random' | 'shuffle' | 'custom';
   customOrderColumn?: string;
   customRowOrder?: any[];
+  // Preference Test fields (taskType === 'preferenceTest')
+  preferenceColumns?: string[];
+  preferenceQuestion?: string;
+  stage2Fields?: RubricField[];
+  secondaryDisplayColumns?: string[];
+  secondaryFields?: RubricField[];
   _createdBy?: string | null;
   _dateCreated?: string;
   _dateUpdated?: string;
@@ -46,7 +53,7 @@ export interface Annotation {
   _id: string;
   dataset: string;
   rubric: string | { _id: string; title: string };
-  rows: Array<{ datasetRow: string | { _id: string; data: Record<string, unknown> }; values: Record<string, any>; _dateAnnotated?: string }>;
+  rows: Array<{ datasetRow: string | { _id: string; data: Record<string, unknown> }; values: Record<string, any>; preferenceChoice?: string | null; _dateAnnotated?: string }>;
   completed?: boolean;
   targetRowCount?: number;
   _annotator?:
@@ -126,15 +133,26 @@ export const datasetApi = createApi({
       query: (rubricId) => ({ url: `/rubric/${rubricId}`, method: 'GET' }),
     }),
     createRubric: builder.mutation<
-      { success: boolean; rubric: Rubric }, 
-      { title: string; datasetId: string; displayColumns: string[]; fields: RubricField[]; rowDisplayOrder?: 'default' | 'random' | 'shuffle' | 'custom'; customOrderColumn?: string; customRowOrder?: any[] }
+      { success: boolean; rubric: Rubric },
+      {
+        title: string; datasetId: string; taskType?: 'standard' | 'preferenceTest';
+        displayColumns: string[]; fields: RubricField[];
+        rowDisplayOrder?: 'default' | 'random' | 'shuffle' | 'custom'; customOrderColumn?: string; customRowOrder?: any[];
+        preferenceColumns?: string[]; preferenceQuestion?: string; stage2Fields?: RubricField[];
+        secondaryDisplayColumns?: string[]; secondaryFields?: RubricField[];
+      }
     >({
       invalidatesTags: (_result, _error, arg) => [{ type: 'Rubric', id: arg.datasetId }],
       query: (body) => ({ url: '/rubric/create', method: 'POST', body }),
     }),
     updateRubric: builder.mutation<
-      { success: boolean; rubric: Rubric }, 
-      { rubricId: string; title?: string; displayColumns?: string[]; fields?: RubricField[]; rowDisplayOrder?: 'default' | 'random' | 'shuffle' | 'custom'; customOrderColumn?: string; customRowOrder?: any[] }
+      { success: boolean; rubric: Rubric },
+      {
+        rubricId: string; title?: string; displayColumns?: string[]; fields?: RubricField[];
+        rowDisplayOrder?: 'default' | 'random' | 'shuffle' | 'custom'; customOrderColumn?: string; customRowOrder?: any[];
+        preferenceColumns?: string[]; preferenceQuestion?: string; stage2Fields?: RubricField[];
+        secondaryDisplayColumns?: string[]; secondaryFields?: RubricField[];
+      }
     >({
       invalidatesTags: (_result, _error, arg) => [{ type: 'Rubric', id: arg.rubricId }],
       query: ({ rubricId, ...body }) => ({ url: `/rubric/${rubricId}`, method: 'PUT', body }),
@@ -164,7 +182,7 @@ export const datasetApi = createApi({
     }),
     saveAnnotation: builder.mutation<
       { success: boolean; annotation: Annotation },
-      { datasetId: string; rubricId: string; datasetRowId: string; annotations: Record<string, any>; annotationId?: string }
+      { datasetId: string; rubricId: string; datasetRowId: string; annotations: Record<string, any>; annotationId?: string; preferenceChoice?: string }
     >({
       invalidatesTags: (_result, _error, arg) => [
         { type: 'Annotation', id: arg.datasetId },

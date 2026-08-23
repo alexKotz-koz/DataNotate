@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  useFetchDatasetsQuery, 
+import {
+  useFetchDatasetsQuery,
   useGetRubricsByDatasetQuery,
   useCreateRubricMutation,
   useUpdateRubricMutation,
   useDeleteRubricMutation,
   useFetchDatasetRowsQuery,
-  type RubricField 
+  type RubricField
 } from '../../store';
+import FieldBuilder from '../rubric/FieldBuilder';
 
 function RubricManagement() {
   const { datasetId } = useParams();
@@ -22,6 +23,7 @@ function RubricManagement() {
 
   const [showModal, setShowModal] = useState(false);
   const [editingRubricId, setEditingRubricId] = useState<string | null>(null);
+  const [taskType, setTaskType] = useState<'standard' | 'preferenceTest'>('standard');
   const [rubricTitle, setRubricTitle] = useState('');
   const [selectedDisplayColumns, setSelectedDisplayColumns] = useState<string[]>([]);
   const [fields, setFields] = useState<RubricField[]>([]);
@@ -30,41 +32,39 @@ function RubricManagement() {
   const [customRowOrder, setCustomRowOrder] = useState<any[]>([]);
   const [rangeFilterText, setRangeFilterText] = useState<string>('');
 
+  // Preference Test fields
+  const [preferenceColumnA, setPreferenceColumnA] = useState<string>('');
+  const [preferenceColumnB, setPreferenceColumnB] = useState<string>('');
+  const [preferenceQuestion, setPreferenceQuestion] = useState<string>('');
+  const [stage2Fields, setStage2Fields] = useState<RubricField[]>([]);
+  const [secondaryDisplayColumns, setSecondaryDisplayColumns] = useState<string[]>([]);
+  const [secondaryFields, setSecondaryFields] = useState<RubricField[]>([]);
+
   const dataset = datasets?.find(d => d._id === datasetId);
 
   useEffect(() => {
     if (editingRubricId && rubrics) {
       const rubric = rubrics.find(r => r._id === editingRubricId);
       if (rubric) {
+        setTaskType(rubric.taskType || 'standard');
         setRubricTitle(rubric.title);
         setSelectedDisplayColumns(rubric.displayColumns);
         setFields(rubric.fields);
         setRowDisplayOrder(rubric.rowDisplayOrder || 'default');
         setCustomOrderColumn(rubric.customOrderColumn || '');
         setCustomRowOrder(rubric.customRowOrder || []);
+        setPreferenceColumnA(rubric.preferenceColumns?.[0] || '');
+        setPreferenceColumnB(rubric.preferenceColumns?.[1] || '');
+        setPreferenceQuestion(rubric.preferenceQuestion || '');
+        setStage2Fields(rubric.stage2Fields || []);
+        setSecondaryDisplayColumns(rubric.secondaryDisplayColumns || []);
+        setSecondaryFields(rubric.secondaryFields || []);
       }
     }
   }, [editingRubricId, rubrics]);
 
-  const handleOpenModal = (rubricId?: string) => {
-    if (rubricId) {
-      setEditingRubricId(rubricId);
-    } else {
-      setEditingRubricId(null);
-      setRubricTitle('');
-      setSelectedDisplayColumns([]);
-      setFields([]);
-      setRowDisplayOrder('default');
-      setCustomOrderColumn('');
-      setCustomRowOrder([]);
-      setRangeFilterText('');
-    }
-    setShowModal(true);
-  };
-
-  const handleCloseModal = () => {
-    setShowModal(false);
-    setEditingRubricId(null);
+  const resetModalState = () => {
+    setTaskType('standard');
     setRubricTitle('');
     setSelectedDisplayColumns([]);
     setFields([]);
@@ -72,17 +72,28 @@ function RubricManagement() {
     setCustomOrderColumn('');
     setCustomRowOrder([]);
     setRangeFilterText('');
+    setPreferenceColumnA('');
+    setPreferenceColumnB('');
+    setPreferenceQuestion('');
+    setStage2Fields([]);
+    setSecondaryDisplayColumns([]);
+    setSecondaryFields([]);
   };
 
-  const handleAddField = () => {
-    setFields([
-      ...fields,
-      { name: '', label: '', type: 'string', required: false, instructions: '', isDatasetColumn: false }
-    ]);
+  const handleOpenModal = (rubricId?: string) => {
+    if (rubricId) {
+      setEditingRubricId(rubricId);
+    } else {
+      setEditingRubricId(null);
+      resetModalState();
+    }
+    setShowModal(true);
   };
 
-  const handleRemoveField = (index: number) => {
-    setFields(fields.filter((_, i) => i !== index));
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setEditingRubricId(null);
+    resetModalState();
   };
 
   const handleFieldChange = (index: number, key: keyof RubricField, value: any) => {
@@ -212,37 +223,52 @@ function RubricManagement() {
       return;
     }
 
-    if (selectedDisplayColumns.length === 0) {
-      alert('Please select at least one display column');
-      return;
+    if (taskType === 'standard') {
+      if (selectedDisplayColumns.length === 0) {
+        alert('Please select at least one display column');
+        return;
+      }
+      if (fields.length === 0) {
+        alert('Please add at least one annotation field');
+        return;
+      }
+    } else {
+      if (!preferenceColumnA || !preferenceColumnB) {
+        alert('Please select the two columns to compare');
+        return;
+      }
+      if (preferenceColumnA === preferenceColumnB) {
+        alert('The two preference columns must be different');
+        return;
+      }
+      if (!preferenceQuestion.trim()) {
+        alert('Please provide the preference question');
+        return;
+      }
     }
 
-    if (fields.length === 0) {
-      alert('Please add at least one annotation field');
-      return;
-    }
+    const basePayload = {
+      title: rubricTitle,
+      taskType,
+      displayColumns: selectedDisplayColumns,
+      fields: taskType === 'standard' ? fields : [],
+      rowDisplayOrder,
+      customOrderColumn: rowDisplayOrder === 'custom' ? customOrderColumn : undefined,
+      customRowOrder: rowDisplayOrder === 'custom' ? customRowOrder : undefined,
+      ...(taskType === 'preferenceTest' ? {
+        preferenceColumns: [preferenceColumnA, preferenceColumnB],
+        preferenceQuestion,
+        stage2Fields,
+        secondaryDisplayColumns,
+        secondaryFields,
+      } : {}),
+    };
 
     try {
       if (editingRubricId) {
-        await updateRubric({
-          rubricId: editingRubricId,
-          title: rubricTitle,
-          displayColumns: selectedDisplayColumns,
-          fields,
-          rowDisplayOrder,
-          customOrderColumn: rowDisplayOrder === 'custom' ? customOrderColumn : undefined,
-          customRowOrder: rowDisplayOrder === 'custom' ? customRowOrder : undefined,
-        }).unwrap();
+        await updateRubric({ rubricId: editingRubricId, ...basePayload }).unwrap();
       } else {
-        await createRubric({
-          datasetId,
-          title: rubricTitle,
-          displayColumns: selectedDisplayColumns,
-          fields,
-          rowDisplayOrder,
-          customOrderColumn: rowDisplayOrder === 'custom' ? customOrderColumn : undefined,
-          customRowOrder: rowDisplayOrder === 'custom' ? customRowOrder : undefined,
-        }).unwrap();
+        await createRubric({ datasetId, ...basePayload }).unwrap();
       }
       handleCloseModal();
     } catch (error: any) {
@@ -297,11 +323,23 @@ function RubricManagement() {
             <div key={rubric._id} className="col-md-6 col-lg-4 mb-4">
               <div className="card h-100">
                 <div className="card-body">
-                  <h5 className="card-title">{rubric.title}</h5>
-                  <p className="card-text text-muted">
-                    <small>{rubric.fields.length} annotation fields</small><br />
-                    <small>{rubric.displayColumns.length} display columns</small>
-                  </p>
+                  <h5 className="card-title">
+                    {rubric.title}
+                    {rubric.taskType === 'preferenceTest' && (
+                      <span className="badge bg-info-subtle text-info-emphasis ms-2">Preference Test</span>
+                    )}
+                  </h5>
+                  {rubric.taskType === 'preferenceTest' ? (
+                    <p className="card-text text-muted">
+                      <small>Comparing: {rubric.preferenceColumns?.join(' vs ')}</small><br />
+                      <small>{(rubric.stage2Fields?.length || 0) + (rubric.secondaryFields?.length || 0)} survey fields</small>
+                    </p>
+                  ) : (
+                    <p className="card-text text-muted">
+                      <small>{rubric.fields.length} annotation fields</small><br />
+                      <small>{rubric.displayColumns.length} display columns</small>
+                    </p>
+                  )}
                   <div className="d-flex gap-2">
                     <button 
                       className="btn btn-sm btn-outline-primary"
@@ -353,6 +391,48 @@ function RubricManagement() {
                   />
                 </div>
 
+                <div className="mb-4">
+                  <label className="form-label">Task Type</label>
+                  <div className="row g-2">
+                    <div className="col-md-6">
+                      <input
+                        type="radio"
+                        className="btn-check"
+                        name="taskType"
+                        id="task-type-standard"
+                        checked={taskType === 'standard'}
+                        disabled={!!editingRubricId}
+                        onChange={() => setTaskType('standard')}
+                      />
+                      <label className="btn btn-outline-primary w-100" htmlFor="task-type-standard">
+                        <i className="bi bi-card-checklist me-2"></i>
+                        Standard
+                        <small className="d-block text-muted">Rate/annotate each row</small>
+                      </label>
+                    </div>
+                    <div className="col-md-6">
+                      <input
+                        type="radio"
+                        className="btn-check"
+                        name="taskType"
+                        id="task-type-preference"
+                        checked={taskType === 'preferenceTest'}
+                        disabled={!!editingRubricId}
+                        onChange={() => setTaskType('preferenceTest')}
+                      />
+                      <label className="btn btn-outline-primary w-100" htmlFor="task-type-preference">
+                        <i className="bi bi-arrow-left-right me-2"></i>
+                        Preference Test
+                        <small className="d-block text-muted">Compare two columns head-to-head</small>
+                      </label>
+                    </div>
+                  </div>
+                  {editingRubricId && (
+                    <small className="text-muted d-block mt-1">Task type can't be changed after a rubric is created.</small>
+                  )}
+                </div>
+
+                {taskType === 'standard' && (
                 <div className="mb-4">
                   <label className="form-label">Dataset Columns Configuration</label>
                   <p className="text-muted small">
@@ -409,6 +489,7 @@ function RubricManagement() {
                     </table>
                   </div>
                 </div>
+                )}
 
                 <div className="mb-4">
                   <label className="form-label">Row Display Order</label>
@@ -572,102 +653,135 @@ function RubricManagement() {
                   )}
                 </div>
 
+                {taskType === 'standard' && (
                 <div className="mb-3">
-                  <div className="d-flex justify-content-between align-items-center mb-2">
-                    <label className="form-label mb-0">Additional Annotation Fields</label>
-                    <button className="btn btn-sm btn-outline-primary" onClick={handleAddField}>
-                      <i className="bi bi-plus-lg me-1"></i>Add Custom Field
-                    </button>
-                  </div>
-                  <p className="text-muted small">Add new fields that are not in the dataset</p>
-                  
-                  {fields.filter(f => !f.isDatasetColumn).map((field) => {
-                    const index = fields.indexOf(field);
-                    return (
-                    <div key={index} className="card mb-2">
-                      <div className="card-body">
-                        <div className="row g-2">
-                          <div className="col-md-6">
-                            <input
-                              type="text"
-                              className="form-control form-control-sm"
-                              placeholder="Field name (e.g., quality_score)"
-                              value={field.name}
-                              onChange={(e) => handleFieldChange(index, 'name', e.target.value)}
-                            />
-                          </div>
-                          <div className="col-md-6">
-                            <input
-                              type="text"
-                              className="form-control form-control-sm"
-                              placeholder="Label (e.g., Quality Score)"
-                              value={field.label}
-                              onChange={(e) => handleFieldChange(index, 'label', e.target.value)}
-                            />
-                          </div>
-                          <div className="col-12">
-                            <input
-                              type="text"
-                              className="form-control form-control-sm"
-                              placeholder="Instructions (e.g., Only use 'vague' or 'clear')"
-                              value={field.instructions || ''}
-                              onChange={(e) => handleFieldChange(index, 'instructions', e.target.value)}
-                            />
-                          </div>
-                          <div className="col-md-4">
-                            <select
-                              className="form-select form-select-sm"
-                              value={field.type}
-                              onChange={(e) => handleFieldChange(index, 'type', e.target.value)}
-                            >
-                              <option value="string">Text</option>
-                              <option value="number">Number</option>
-                              <option value="boolean">Yes/No</option>
-                              <option value="select">Dropdown</option>
-                            </select>
-                          </div>
-                          <div className="col-md-4">
-                            <div className="form-check">
-                              <input
-                                className="form-check-input"
-                                type="checkbox"
-                                checked={field.required || false}
-                                onChange={(e) => handleFieldChange(index, 'required', e.target.checked)}
-                                id={`required-${index}`}
-                              />
-                              <label className="form-check-label" htmlFor={`required-${index}`}>
-                                Required
-                              </label>
-                            </div>
-                          </div>
-                          <div className="col-md-2">
-                            <button
-                              className="btn btn-sm btn-outline-danger w-100"
-                              onClick={() => handleRemoveField(index)}
-                            >
-                              <i className="bi bi-trash"></i>
-                            </button>
-                          </div>
-                          {field.type === 'select' && (
-                            <div className="col-12">
-                              <input
-                                type="text"
-                                className="form-control form-control-sm"
-                                placeholder="Options (comma-separated, e.g., Good, Fair, Poor)"
-                                value={field.options?.join(', ') || ''}
-                                onChange={(e) => handleFieldChange(index, 'options', e.target.value.split(',').map(s => s.trim()))}
-                              />
-                            </div>
-                          )}
-                        </div>
+                  <label className="form-label mb-0">Additional Annotation Fields</label>
+                  <FieldBuilder
+                    fields={fields.filter(f => !f.isDatasetColumn)}
+                    onChange={(updated) => setFields([...fields.filter(f => f.isDatasetColumn), ...updated])}
+                    helpText="Add new fields that are not in the dataset"
+                    emptyText='No custom fields yet. Click "Add Custom Field" to create one.'
+                  />
+                </div>
+                )}
+
+                {taskType === 'preferenceTest' && (
+                <>
+                  <div className="mb-4">
+                    <label className="form-label">Preference Columns</label>
+                    <p className="text-muted small">
+                      Choose the two dataset columns to compare. These are shown blinded (as "Response A" / "Response B")
+                      until the final stage.
+                    </p>
+                    <div className="row g-2">
+                      <div className="col-md-6">
+                        <label className="form-label small">Response A</label>
+                        <select
+                          className="form-select"
+                          value={preferenceColumnA}
+                          onChange={(e) => setPreferenceColumnA(e.target.value)}
+                        >
+                          <option value="">Select column...</option>
+                          {dataset.columns.filter(c => c !== preferenceColumnB).map(c => (
+                            <option key={c} value={c}>{c}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="col-md-6">
+                        <label className="form-label small">Response B</label>
+                        <select
+                          className="form-select"
+                          value={preferenceColumnB}
+                          onChange={(e) => setPreferenceColumnB(e.target.value)}
+                        >
+                          <option value="">Select column...</option>
+                          {dataset.columns.filter(c => c !== preferenceColumnA).map(c => (
+                            <option key={c} value={c}>{c}</option>
+                          ))}
+                        </select>
                       </div>
                     </div>
-                  );
-                  })}
-                  {fields.filter(f => !f.isDatasetColumn).length === 0 && (
-                    <p className="text-muted text-center py-3">No custom fields yet. Click "Add Custom Field" to create one.</p>
-                  )}
-                </div>
+                  </div>
+
+                  <div className="mb-4">
+                    <label className="form-label">Preference Question</label>
+                    <p className="text-muted small">Shown to the annotator alongside the two blinded responses (stage 1).</p>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={preferenceQuestion}
+                      onChange={(e) => setPreferenceQuestion(e.target.value)}
+                      placeholder="e.g., Which response do you prefer?"
+                    />
+                  </div>
+
+                  <div className="mb-4">
+                    <label className="form-label">Display Columns (context)</label>
+                    <p className="text-muted small">
+                      Optional dataset columns shown above the comparison at all times (e.g. the original prompt).
+                    </p>
+                    <div className="d-flex flex-wrap gap-3">
+                      {dataset.columns.filter(c => c !== preferenceColumnA && c !== preferenceColumnB).map(col => (
+                        <div className="form-check" key={col}>
+                          <input
+                            className="form-check-input"
+                            type="checkbox"
+                            id={`display-${col}`}
+                            checked={selectedDisplayColumns.includes(col)}
+                            onChange={() => handleToggleDisplayColumn(col)}
+                          />
+                          <label className="form-check-label" htmlFor={`display-${col}`}>{col}</label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="mb-4">
+                    <label className="form-label mb-0">Stage 2: Follow-up Survey</label>
+                    <FieldBuilder
+                      fields={stage2Fields}
+                      onChange={setStage2Fields}
+                      addLabel="Add Question"
+                      helpText="Shown after the annotator picks a preference; both responses remain blinded."
+                      emptyText="No follow-up questions yet."
+                    />
+                  </div>
+
+                  <div className="mb-4">
+                    <label className="form-label">Stage 3: Secondary Reveal Columns</label>
+                    <p className="text-muted small">
+                      Additional dataset columns revealed only in the final, unblinded stage (e.g. a transcript).
+                    </p>
+                    <div className="d-flex flex-wrap gap-3">
+                      {dataset.columns.filter(c => c !== preferenceColumnA && c !== preferenceColumnB).map(col => (
+                        <div className="form-check" key={col}>
+                          <input
+                            className="form-check-input"
+                            type="checkbox"
+                            id={`secondary-${col}`}
+                            checked={secondaryDisplayColumns.includes(col)}
+                            onChange={() => setSecondaryDisplayColumns(prev =>
+                              prev.includes(col) ? prev.filter(c => c !== col) : [...prev, col]
+                            )}
+                          />
+                          <label className="form-check-label" htmlFor={`secondary-${col}`}>{col}</label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="mb-4">
+                    <label className="form-label mb-0">Stage 3: Secondary Survey</label>
+                    <FieldBuilder
+                      fields={secondaryFields}
+                      onChange={setSecondaryFields}
+                      addLabel="Add Question"
+                      helpText="Shown in the final stage, after real labels are revealed."
+                      emptyText="No secondary questions yet."
+                    />
+                  </div>
+                </>
+                )}
               </div>
               <div className="modal-footer">
                 <button type="button" className="btn btn-secondary" onClick={handleCloseModal}>
