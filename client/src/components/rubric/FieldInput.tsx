@@ -41,13 +41,35 @@ function FieldInput({ field, value, onChange }: FieldInputProps) {
       )}
 
       {field.type === 'boolean' && (
-        <div className="form-check form-switch">
-          <input
-            className="form-check-input"
-            type="checkbox"
-            checked={!!value}
-            onChange={(e) => onChange(e.target.checked)}
-          />
+        <div>
+          <div className="form-check form-check-inline">
+            <input
+              className="form-check-input"
+              type="radio"
+              name={`field-${field.name}`}
+              id={`field-${field.name}-yes`}
+              checked={value === true}
+              onChange={() => onChange(true)}
+              required={field.required}
+            />
+            <label className="form-check-label" htmlFor={`field-${field.name}-yes`}>
+              Yes
+            </label>
+          </div>
+          <div className="form-check form-check-inline">
+            <input
+              className="form-check-input"
+              type="radio"
+              name={`field-${field.name}`}
+              id={`field-${field.name}-no`}
+              checked={value === false}
+              onChange={() => onChange(false)}
+              required={field.required}
+            />
+            <label className="form-check-label" htmlFor={`field-${field.name}-no`}>
+              No
+            </label>
+          </div>
         </div>
       )}
 
