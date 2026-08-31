@@ -111,6 +111,25 @@ function RubricManagement() {
     );
   };
 
+  const handleTaskTypeChange = (type: 'standard' | 'preferenceTest') => {
+    setTaskType(type);
+    setSelectedDisplayColumns([]);
+    setSelectedDownloadOnlyColumns([]);
+    setFields([]);
+  };
+
+  const handlePreferenceColumnAChange = (column: string) => {
+    setPreferenceColumnA(column);
+    setSelectedDisplayColumns(prev => prev.filter(c => c !== column));
+    setSecondaryDisplayColumns(prev => prev.filter(c => c !== column));
+  };
+
+  const handlePreferenceColumnBChange = (column: string) => {
+    setPreferenceColumnB(column);
+    setSelectedDisplayColumns(prev => prev.filter(c => c !== column));
+    setSecondaryDisplayColumns(prev => prev.filter(c => c !== column));
+  };
+
   const handleToggleDownloadOnlyColumn = (column: string) => {
     setSelectedDownloadOnlyColumns(prev =>
       prev.includes(column) ? prev.filter(c => c !== column) : [...prev, column]
@@ -412,7 +431,7 @@ function RubricManagement() {
                         id="task-type-standard"
                         checked={taskType === 'standard'}
                         disabled={!!editingRubricId}
-                        onChange={() => setTaskType('standard')}
+                        onChange={() => handleTaskTypeChange('standard')}
                       />
                       <label className="btn btn-outline-primary w-100" htmlFor="task-type-standard">
                         <i className="bi bi-card-checklist me-2"></i>
@@ -428,7 +447,7 @@ function RubricManagement() {
                         id="task-type-preference"
                         checked={taskType === 'preferenceTest'}
                         disabled={!!editingRubricId}
-                        onChange={() => setTaskType('preferenceTest')}
+                        onChange={() => handleTaskTypeChange('preferenceTest')}
                       />
                       <label className="btn btn-outline-primary w-100" htmlFor="task-type-preference">
                         <i className="bi bi-arrow-left-right me-2"></i>
@@ -699,7 +718,7 @@ function RubricManagement() {
                         <select
                           className="form-select"
                           value={preferenceColumnA}
-                          onChange={(e) => setPreferenceColumnA(e.target.value)}
+                          onChange={(e) => handlePreferenceColumnAChange(e.target.value)}
                         >
                           <option value="">Select column...</option>
                           {dataset.columns.filter(c => c !== preferenceColumnB).map(c => (
@@ -712,7 +731,7 @@ function RubricManagement() {
                         <select
                           className="form-select"
                           value={preferenceColumnB}
-                          onChange={(e) => setPreferenceColumnB(e.target.value)}
+                          onChange={(e) => handlePreferenceColumnBChange(e.target.value)}
                         >
                           <option value="">Select column...</option>
                           {dataset.columns.filter(c => c !== preferenceColumnA).map(c => (
@@ -768,9 +787,9 @@ function RubricManagement() {
                   </div>
 
                   <div className="mb-4">
-                    <label className="form-label">Stage 3: Secondary Reveal Columns</label>
+                    <label className="form-label">Stage 3: Secondary Reveal Columns <span className="text-muted fw-normal">(Optional)</span></label>
                     <p className="text-muted small">
-                      Additional dataset columns revealed only in the final, unblinded stage (e.g. a transcript).
+                      Additional dataset columns revealed only in the final, unblinded stage (e.g. a transcript). Leave unselected to skip this stage.
                     </p>
                     <div className="d-flex flex-wrap gap-3">
                       {dataset.columns.filter(c => c !== preferenceColumnA && c !== preferenceColumnB).map(col => (
@@ -791,12 +810,12 @@ function RubricManagement() {
                   </div>
 
                   <div className="mb-4">
-                    <label className="form-label mb-0">Stage 3: Secondary Survey</label>
+                    <label className="form-label mb-0">Stage 3: Secondary Survey <span className="text-muted fw-normal">(Optional)</span></label>
                     <FieldBuilder
                       fields={secondaryFields}
                       onChange={setSecondaryFields}
                       addLabel="Add Question"
-                      helpText="Shown in the final stage, after real labels are revealed."
+                      helpText="Shown in the final stage, after real labels are revealed. Leave empty to skip this stage."
                       emptyText="No secondary questions yet."
                     />
                   </div>
