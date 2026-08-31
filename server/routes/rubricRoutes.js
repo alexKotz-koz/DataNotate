@@ -112,7 +112,7 @@ router.get('/:rubricId', requireAuth, async (req, res) => {
 router.post('/create', requireRoles('researcher'), async (req, res) => {
   try {
     const {
-      title, datasetId, taskType, displayColumns, fields,
+      title, datasetId, taskType, displayColumns, downloadOnlyColumns, fields,
       rowDisplayOrder, customOrderColumn, customRowOrder,
       preferenceColumns, preferenceQuestion, stage2Fields,
       secondaryDisplayColumns, secondaryFields
@@ -127,6 +127,16 @@ router.post('/create', requireRoles('researcher'), async (req, res) => {
 
     const dataset = await Dataset.findById(datasetId);
     if (!dataset) return res.status(404).json({ error: 'Dataset not found' });
+
+    if (Array.isArray(downloadOnlyColumns)) {
+      const invalidDownloadOnly = downloadOnlyColumns.filter(c => !dataset.columns.includes(c));
+      if (invalidDownloadOnly.length) {
+        return res.status(400).json({
+          error: 'Download-only columns not in dataset',
+          invalidDownloadOnly
+        });
+      }
+    }
 
     if (resolvedTaskType === 'standard') {
       if (!Array.isArray(displayColumns) || displayColumns.length === 0) {
@@ -170,6 +180,7 @@ router.post('/create', requireRoles('researcher'), async (req, res) => {
       dataset: datasetId,
       taskType: resolvedTaskType,
       displayColumns: displayColumns || [],
+      downloadOnlyColumns: downloadOnlyColumns || [],
       fields: resolvedTaskType === 'standard' ? fields : [],
       _createdBy: req.user?._id || null
     };
@@ -219,7 +230,7 @@ router.put('/:rubricId', requireRoles('researcher'), async (req, res) => {
   try {
     const { rubricId } = req.params;
     const {
-      title, displayColumns, fields, rowDisplayOrder, customOrderColumn, customRowOrder,
+      title, displayColumns, downloadOnlyColumns, fields, rowDisplayOrder, customOrderColumn, customRowOrder,
       preferenceColumns, preferenceQuestion, stage2Fields,
       secondaryDisplayColumns, secondaryFields
     } = req.body;
@@ -239,6 +250,16 @@ router.put('/:rubricId', requireRoles('researcher'), async (req, res) => {
         return res.status(400).json({
           error: 'Display columns not in dataset',
           invalidDisplay
+        });
+      }
+    }
+
+    if (downloadOnlyColumns) {
+      const invalidDownloadOnly = downloadOnlyColumns.filter(c => !dataset.columns.includes(c));
+      if (invalidDownloadOnly.length) {
+        return res.status(400).json({
+          error: 'Download-only columns not in dataset',
+          invalidDownloadOnly
         });
       }
     }
@@ -273,6 +294,7 @@ router.put('/:rubricId', requireRoles('researcher'), async (req, res) => {
     // Update fields
     if (title) rubric.title = title;
     if (displayColumns) rubric.displayColumns = displayColumns;
+    if (downloadOnlyColumns) rubric.downloadOnlyColumns = downloadOnlyColumns;
     if (rubric.taskType === 'standard' && fields) rubric.fields = fields;
     if (rowDisplayOrder && ['default', 'random', 'shuffle', 'custom'].includes(rowDisplayOrder)) {
       rubric.rowDisplayOrder = rowDisplayOrder;

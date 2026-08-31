@@ -24,6 +24,7 @@ const RubricSchema = new Schema({
         default: 'standard'
     },
     displayColumns: [{ type: String, required: true }], // Dataset columns to show to annotator
+    downloadOnlyColumns: [{ type: String }], // Dataset columns included only in the final annotation download, never shown during annotation
     fields: [RubricFieldSchema], // Fields to annotate (can be from dataset or custom)
     rowDisplayOrder: {
         type: String,

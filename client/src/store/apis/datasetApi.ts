@@ -34,6 +34,7 @@ export interface Rubric {
   dataset: string;
   taskType?: 'standard' | 'preferenceTest';
   displayColumns: string[];
+  downloadOnlyColumns?: string[];
   fields: RubricField[];
   rowDisplayOrder?: 'default' | 'random' | 'shuffle' | 'custom';
   customOrderColumn?: string;
@@ -136,7 +137,7 @@ export const datasetApi = createApi({
       { success: boolean; rubric: Rubric },
       {
         title: string; datasetId: string; taskType?: 'standard' | 'preferenceTest';
-        displayColumns: string[]; fields: RubricField[];
+        displayColumns: string[]; downloadOnlyColumns?: string[]; fields: RubricField[];
         rowDisplayOrder?: 'default' | 'random' | 'shuffle' | 'custom'; customOrderColumn?: string; customRowOrder?: any[];
         preferenceColumns?: string[]; preferenceQuestion?: string; stage2Fields?: RubricField[];
         secondaryDisplayColumns?: string[]; secondaryFields?: RubricField[];
@@ -148,7 +149,7 @@ export const datasetApi = createApi({
     updateRubric: builder.mutation<
       { success: boolean; rubric: Rubric },
       {
-        rubricId: string; title?: string; displayColumns?: string[]; fields?: RubricField[];
+        rubricId: string; title?: string; displayColumns?: string[]; downloadOnlyColumns?: string[]; fields?: RubricField[];
         rowDisplayOrder?: 'default' | 'random' | 'shuffle' | 'custom'; customOrderColumn?: string; customRowOrder?: any[];
         preferenceColumns?: string[]; preferenceQuestion?: string; stage2Fields?: RubricField[];
         secondaryDisplayColumns?: string[]; secondaryFields?: RubricField[];

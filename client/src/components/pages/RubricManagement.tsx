@@ -26,6 +26,7 @@ function RubricManagement() {
   const [taskType, setTaskType] = useState<'standard' | 'preferenceTest'>('standard');
   const [rubricTitle, setRubricTitle] = useState('');
   const [selectedDisplayColumns, setSelectedDisplayColumns] = useState<string[]>([]);
+  const [selectedDownloadOnlyColumns, setSelectedDownloadOnlyColumns] = useState<string[]>([]);
   const [fields, setFields] = useState<RubricField[]>([]);
   const [rowDisplayOrder, setRowDisplayOrder] = useState<'default' | 'random' | 'shuffle' | 'custom'>('default');
   const [customOrderColumn, setCustomOrderColumn] = useState<string>('');
@@ -49,6 +50,7 @@ function RubricManagement() {
         setTaskType(rubric.taskType || 'standard');
         setRubricTitle(rubric.title);
         setSelectedDisplayColumns(rubric.displayColumns);
+        setSelectedDownloadOnlyColumns(rubric.downloadOnlyColumns || []);
         setFields(rubric.fields);
         setRowDisplayOrder(rubric.rowDisplayOrder || 'default');
         setCustomOrderColumn(rubric.customOrderColumn || '');
@@ -67,6 +69,7 @@ function RubricManagement() {
     setTaskType('standard');
     setRubricTitle('');
     setSelectedDisplayColumns([]);
+    setSelectedDownloadOnlyColumns([]);
     setFields([]);
     setRowDisplayOrder('default');
     setCustomOrderColumn('');
@@ -104,6 +107,12 @@ function RubricManagement() {
 
   const handleToggleDisplayColumn = (column: string) => {
     setSelectedDisplayColumns(prev =>
+      prev.includes(column) ? prev.filter(c => c !== column) : [...prev, column]
+    );
+  };
+
+  const handleToggleDownloadOnlyColumn = (column: string) => {
+    setSelectedDownloadOnlyColumns(prev =>
       prev.includes(column) ? prev.filter(c => c !== column) : [...prev, column]
     );
   };
@@ -251,6 +260,7 @@ function RubricManagement() {
       title: rubricTitle,
       taskType,
       displayColumns: selectedDisplayColumns,
+      downloadOnlyColumns: selectedDownloadOnlyColumns,
       fields: taskType === 'standard' ? fields : [],
       rowDisplayOrder,
       customOrderColumn: rowDisplayOrder === 'custom' ? customOrderColumn : undefined,
@@ -437,7 +447,8 @@ function RubricManagement() {
                   <label className="form-label">Dataset Columns Configuration</label>
                   <p className="text-muted small">
                     <strong>Display:</strong> Show this column during annotation<br />
-                    <strong>Rubric:</strong> Annotators will fill this field (existing column)
+                    <strong>Rubric:</strong> Annotators will fill this field (existing column)<br />
+                    <strong>Download Only:</strong> Not shown during annotation; included only in the final data download
                   </p>
                   <div className="table-responsive">
                     <table className="table table-sm">
@@ -446,6 +457,7 @@ function RubricManagement() {
                           <th>Column Name</th>
                           <th className="text-center">Display</th>
                           <th className="text-center">Rubric</th>
+                          <th className="text-center">Download Only</th>
                           <th>Instructions</th>
                         </tr>
                       </thead>
@@ -470,6 +482,14 @@ function RubricManagement() {
                                   type="checkbox"
                                   checked={isInRubric}
                                   onChange={() => handleToggleRubricColumn(column)}
+                                />
+                              </td>
+                              <td className="text-center">
+                                <input
+                                  className="form-check-input"
+                                  type="checkbox"
+                                  checked={selectedDownloadOnlyColumns.includes(column)}
+                                  onChange={() => handleToggleDownloadOnlyColumn(column)}
                                 />
                               </td>
                               <td>

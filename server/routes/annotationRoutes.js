@@ -255,6 +255,9 @@ const formatAnnotationExport = (annotation) => {
   const displayColumns = Array.isArray(annotation?.rubric?.displayColumns)
     ? annotation.rubric.displayColumns
     : [];
+  const downloadOnlyColumns = Array.isArray(annotation?.rubric?.downloadOnlyColumns)
+    ? annotation.rubric.downloadOnlyColumns
+    : [];
   const rubricFieldNames = [
     ...(Array.isArray(annotation?.rubric?.fields) ? annotation.rubric.fields : []),
     ...(Array.isArray(annotation?.rubric?.stage2Fields) ? annotation.rubric.stage2Fields : []),
@@ -286,6 +289,16 @@ const formatAnnotationExport = (annotation) => {
     }, {});
   };
 
+  const projectDownloadOnlyColumns = (row) => {
+    const data = row.datasetRow?.data || {};
+    return downloadOnlyColumns.reduce((acc, column) => {
+      if (Object.prototype.hasOwnProperty.call(data, column)) {
+        acc[column] = data[column];
+      }
+      return acc;
+    }, {});
+  };
+
   return {
     metadata: {
       datasetTitle: annotation.dataset?.title,
@@ -312,6 +325,7 @@ const formatAnnotationExport = (annotation) => {
       rowNumber: index + 1,
       display: projectDisplayColumns(row),
       rubric: projectRubricFields(row),
+      downloadOnly: projectDownloadOnlyColumns(row),
       preferenceChoice: row.preferenceChoice || null,
       dateAnnotated: row._dateAnnotated
     }))
