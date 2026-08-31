@@ -70,13 +70,16 @@ function PreferenceTaskPanel({
   const stage2Fields = rubric.stage2Fields || [];
   const secondaryFields = rubric.secondaryFields || [];
   const secondaryDisplayColumns = rubric.secondaryDisplayColumns || [];
+  const hasStage3 = secondaryFields.length > 0 || secondaryDisplayColumns.length > 0;
+  const totalStages = hasStage3 ? 3 : 2;
 
   const handleChoose = async (column: string) => {
+    if (column === preferenceChoice) return;
     setChoosing(true);
     try {
       await onChoosePreference(column);
       setPreferenceChoice(column);
-      setStage(2);
+      setStage(prev => (prev === 1 ? 2 : prev));
     } catch (err) {
       console.error('Failed to save preference choice:', err);
       alert('Failed to save your choice. Please try again.');
@@ -94,10 +97,16 @@ function PreferenceTaskPanel({
 
   const renderResponseBox = (column: string, position: 'A' | 'B', revealed: boolean) => {
     const isChosen = preferenceChoice === column;
+    const changeable = stage === 2;
     return (
       <div
         key={column}
-        className={`p-3 rounded border ${isChosen ? 'border-success border-2 bg-success-subtle' : 'border-secondary-subtle bg-light'}`}
+        role={changeable ? 'button' : undefined}
+        tabIndex={changeable ? 0 : undefined}
+        onClick={changeable ? () => handleChoose(column) : undefined}
+        onKeyDown={changeable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleChoose(column); } } : undefined}
+        className={`p-3 rounded border ${isChosen ? 'border-success border-2 bg-success-subtle' : 'border-secondary-subtle bg-light'} ${changeable ? 'preference-box-changeable' : ''}`}
+        style={changeable ? { cursor: choosing ? 'wait' : 'pointer' } : undefined}
       >
         <div className="d-flex justify-content-between align-items-center mb-2">
           <span className="fw-bold text-primary">{revealed ? column : `Response ${position}`}</span>
@@ -114,7 +123,7 @@ function PreferenceTaskPanel({
         <div className="card shadow-sm">
           <div className="card-header bg-white d-flex justify-content-between align-items-center">
             <h5 className="mb-0">Preference Test</h5>
-            <span className="badge bg-secondary">Stage {stage} of 3</span>
+            <span className="badge bg-secondary">Stage {stage} of {totalStages}</span>
           </div>
           <div className="card-body">
             {rubric.displayColumns.length > 0 && (
@@ -131,8 +140,8 @@ function PreferenceTaskPanel({
             )}
 
             <div className="row g-3 mb-4">
-              <div className="col-md-6">{renderResponseBox(orderedA, 'A', stage === 3)}</div>
-              <div className="col-md-6">{renderResponseBox(orderedB, 'B', stage === 3)}</div>
+              <div className="col-md-6">{renderResponseBox(orderedA, 'A', hasStage3 && stage === 3)}</div>
+              <div className="col-md-6">{renderResponseBox(orderedB, 'B', hasStage3 && stage === 3)}</div>
             </div>
 
             {stage === 1 && (
@@ -161,6 +170,10 @@ function PreferenceTaskPanel({
 
             {stage === 2 && (
               <div>
+                <p className="text-muted small">
+                  <i className="bi bi-info-circle me-1"></i>
+                  You can still click the other response above to change your preference.
+                </p>
                 {stage2Fields.map(field => (
                   <FieldInput
                     key={field.name}
@@ -169,18 +182,42 @@ function PreferenceTaskPanel({
                     onChange={(v) => onFieldChange(field.name, v)}
                   />
                 ))}
-                <button
-                  type="button"
-                  className="btn btn-primary mt-2"
-                  disabled={requiredStage2Missing}
-                  onClick={() => setStage(3)}
-                >
-                  Continue <i className="bi bi-chevron-right ms-1"></i>
-                </button>
+                {hasStage3 ? (
+                  <button
+                    type="button"
+                    className="btn btn-primary mt-2"
+                    disabled={requiredStage2Missing}
+                    onClick={() => setStage(3)}
+                  >
+                    Continue <i className="bi bi-chevron-right ms-1"></i>
+                  </button>
+                ) : (
+                  <div className="d-flex gap-2 mt-2">
+                    {isLastRow ? (
+                      <button
+                        type="button"
+                        className="btn btn-success flex-grow-1"
+                        disabled={isSaving || requiredStage2Missing}
+                        onClick={onSubmit}
+                      >
+                        {isSaving ? 'Saving...' : (<><i className="bi bi-check-circle me-2"></i>Submit Annotation</>)}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn btn-primary flex-grow-1"
+                        disabled={isSaving || requiredStage2Missing}
+                        onClick={onSaveAndNext}
+                      >
+                        {isSaving ? 'Saving...' : (<><i className="bi bi-check-lg me-1"></i>Save & Next</>)}
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
-            {stage === 3 && (
+            {stage === 3 && hasStage3 && (
               <div>
                 {secondaryDisplayColumns.length > 0 && (
                   <div className="mb-4">
