@@ -8,7 +8,12 @@ const RowAnnotationSubSchema = new Schema({
   values: { type: Schema.Types.Mixed, required: true }, // rubric field values for this row
   preferenceChoice: { type: String }, // preferenceTest: dataset column name the annotator chose
   _dateAnnotated: { type: Date, default: Date.now }
-}, { _id: false });
+}, {
+  _id: false,
+  // Without this, Mongoose strips `values` when it's `{}` (e.g. a preference test's
+  // stage-1 choice, saved before any stage 2/3 fields exist), failing `required` on save.
+  minimize: false
+});
 
 const AnnotationSchema = new Schema({
   dataset: { type: Schema.Types.ObjectId, ref: 'Dataset', index: true, required: true },
